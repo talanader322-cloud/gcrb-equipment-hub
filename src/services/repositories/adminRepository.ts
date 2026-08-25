@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { AppRole, ImportJob, Profile } from "@/lib/types";
+import type { AppRole, ImportJob, Profile, Tables } from "@/lib/types";
+
+type Update<T extends keyof Tables> = Tables[T]["Update"];
 
 /** Write-side repository for administration modules (RLS enforces the roles). */
 export const adminRepository = {
@@ -14,7 +16,7 @@ export const adminRepository = {
     const { error } = await supabase.from("manufacturers").insert(input);
     if (error) throw new Error(error.message);
   },
-  async updateManufacturer(id: string, patch: Record<string, unknown>) {
+  async updateManufacturer(id: string, patch: Update<"manufacturers">) {
     const { error } = await supabase.from("manufacturers").update(patch).eq("id", id);
     if (error) throw new Error(error.message);
   },
@@ -29,7 +31,7 @@ export const adminRepository = {
     const { error } = await supabase.from("equipment_types").insert(input);
     if (error) throw new Error(error.message);
   },
-  async updateEquipmentType(id: string, patch: Record<string, unknown>) {
+  async updateEquipmentType(id: string, patch: Update<"equipment_types">) {
     const { error } = await supabase.from("equipment_types").update(patch).eq("id", id);
     if (error) throw new Error(error.message);
   },
@@ -46,7 +48,7 @@ export const adminRepository = {
     if (error) throw new Error(error.message);
     return data.id;
   },
-  async updateModel(id: string, patch: Record<string, unknown>) {
+  async updateModel(id: string, patch: Update<"machine_models">) {
     const { error } = await supabase.from("machine_models").update(patch).eq("id", id);
     if (error) throw new Error(error.message);
   },
@@ -83,7 +85,7 @@ export const adminRepository = {
     if (error) throw new Error(error.message);
     return data.id;
   },
-  async updatePart(id: string, patch: Record<string, unknown>) {
+  async updatePart(id: string, patch: Update<"parts">) {
     const { error } = await supabase.from("parts").update(patch).eq("id", id);
     if (error) throw new Error(error.message);
   },
@@ -110,7 +112,7 @@ export const adminRepository = {
     if (error) throw new Error(error.message);
     return data.id;
   },
-  async updateCatalog(id: string, patch: Record<string, unknown>) {
+  async updateCatalog(id: string, patch: Update<"catalogs">) {
     const { error } = await supabase.from("catalogs").update(patch).eq("id", id);
     if (error) throw new Error(error.message);
   },
