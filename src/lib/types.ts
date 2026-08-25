@@ -103,7 +103,7 @@ export type OnlineResult = {
   equipmentType: string | null;
   externalUrl: string | null;
   importable: boolean;
-  metadata: Record<string, unknown>;
+  metadata: Record<string, string | number | boolean | null>;
 };
 
 export type LocalSearchResults = {

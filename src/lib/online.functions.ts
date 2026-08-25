@@ -7,11 +7,12 @@ import { getConnector } from "@/services/connectors/registry";
 import { detectDuplicates, importPayload } from "@/services/importService.server";
 
 const filtersSchema = z.object({
-  manufacturerId: z.string().nullable().optional(),
-  equipmentTypeId: z.string().nullable().optional(),
-  catalogType: z.string().nullable().optional(),
-  language: z.string().nullable().optional(),
-  serial: z.string().nullable().optional(),
+  manufacturerId: z.string().optional(),
+  equipmentTypeId: z.string().optional(),
+  machineModelId: z.string().optional(),
+  catalogType: z.string().optional(),
+  serialNumber: z.string().optional(),
+  sourceId: z.string().optional(),
 });
 
 /**
