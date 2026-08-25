@@ -229,7 +229,9 @@ export const catalogRepository = {
         .maybeSingle(),
       supabase
         .from("assembly_parts")
-        .select("*, part:parts(id,primary_part_number,description,manufacturer_id)")
+        .select(
+          "*, part:parts!assembly_parts_part_id_fkey(id,primary_part_number,description,manufacturer_id)",
+        )
         .eq("assembly_id", id)
         .order("sort_order"),
       supabase.from("diagrams").select("*").eq("assembly_id", id),
@@ -238,7 +240,9 @@ export const catalogRepository = {
     if (!assembly.data) return null;
     return {
       assembly: assembly.data,
-      parts: (parts.data ?? []) as (AssemblyPart & { part: Part | null })[],
+      parts: (parts.data ?? []) as (AssemblyPart & {
+        part: Pick<Part, "id" | "primary_part_number" | "description" | "manufacturer_id"> | null;
+      })[],
       diagrams: diagrams.data ?? [],
     };
   },
