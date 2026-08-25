@@ -240,7 +240,9 @@ export const catalogRepository = {
     if (!assembly.data) return null;
     return {
       assembly: assembly.data,
-      parts: (parts.data ?? []) as (AssemblyPart & { part: Part | null })[],
+      parts: (parts.data ?? []) as (AssemblyPart & {
+        part: Pick<Part, "id" | "primary_part_number" | "description" | "manufacturer_id"> | null;
+      })[],
       diagrams: diagrams.data ?? [],
     };
   },
