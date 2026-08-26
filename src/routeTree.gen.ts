@@ -12,10 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedEquipmentRouteImport } from './routes/_authenticated/equipment'
+import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated/import'
 import { Route as AuthenticatedManufacturersRouteImport } from './routes/_authenticated/manufacturers'
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedSourcesRouteImport } from './routes/_authenticated/sources'
 import { Route as AuthenticatedAssembliesAssemblyIdRouteImport } from './routes/_authenticated/assemblies.$assemblyId'
 import { Route as AuthenticatedCatalogsIndexRouteImport } from './routes/_authenticated/catalogs.index'
 import { Route as AuthenticatedCatalogsCatalogIdRouteImport } from './routes/_authenticated/catalogs.$catalogId'
@@ -37,6 +41,11 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -45,6 +54,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
 const AuthenticatedEquipmentRoute = AuthenticatedEquipmentRouteImport.update({
   id: '/equipment',
   path: '/equipment',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedImportRoute = AuthenticatedImportRouteImport.update({
+  id: '/import',
+  path: '/import',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedManufacturersRoute =
@@ -56,6 +70,16 @@ const AuthenticatedManufacturersRoute =
 const AuthenticatedSearchRoute = AuthenticatedSearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSourcesRoute = AuthenticatedSourcesRouteImport.update({
+  id: '/sources',
+  path: '/sources',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAssembliesAssemblyIdRoute =
@@ -97,10 +121,14 @@ const AuthenticatedPartsPartIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/equipment': typeof AuthenticatedEquipmentRoute
+  '/import': typeof AuthenticatedImportRoute
   '/manufacturers': typeof AuthenticatedManufacturersRoute
   '/search': typeof AuthenticatedSearchRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/sources': typeof AuthenticatedSourcesRoute
   '/assemblies/$assemblyId': typeof AuthenticatedAssembliesAssemblyIdRoute
   '/catalogs/$catalogId': typeof AuthenticatedCatalogsCatalogIdRoute
   '/models/$modelId': typeof AuthenticatedModelsModelIdRoute
@@ -111,10 +139,14 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/equipment': typeof AuthenticatedEquipmentRoute
+  '/import': typeof AuthenticatedImportRoute
   '/manufacturers': typeof AuthenticatedManufacturersRoute
   '/search': typeof AuthenticatedSearchRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/sources': typeof AuthenticatedSourcesRoute
   '/assemblies/$assemblyId': typeof AuthenticatedAssembliesAssemblyIdRoute
   '/catalogs/$catalogId': typeof AuthenticatedCatalogsCatalogIdRoute
   '/models/$modelId': typeof AuthenticatedModelsModelIdRoute
@@ -127,10 +159,14 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/equipment': typeof AuthenticatedEquipmentRoute
+  '/_authenticated/import': typeof AuthenticatedImportRoute
   '/_authenticated/manufacturers': typeof AuthenticatedManufacturersRoute
   '/_authenticated/search': typeof AuthenticatedSearchRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/sources': typeof AuthenticatedSourcesRoute
   '/_authenticated/assemblies/$assemblyId': typeof AuthenticatedAssembliesAssemblyIdRoute
   '/_authenticated/catalogs/$catalogId': typeof AuthenticatedCatalogsCatalogIdRoute
   '/_authenticated/models/$modelId': typeof AuthenticatedModelsModelIdRoute
@@ -143,10 +179,14 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/admin'
     | '/dashboard'
     | '/equipment'
+    | '/import'
     | '/manufacturers'
     | '/search'
+    | '/settings'
+    | '/sources'
     | '/assemblies/$assemblyId'
     | '/catalogs/$catalogId'
     | '/models/$modelId'
@@ -157,10 +197,14 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/admin'
     | '/dashboard'
     | '/equipment'
+    | '/import'
     | '/manufacturers'
     | '/search'
+    | '/settings'
+    | '/sources'
     | '/assemblies/$assemblyId'
     | '/catalogs/$catalogId'
     | '/models/$modelId'
@@ -172,10 +216,14 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/equipment'
+    | '/_authenticated/import'
     | '/_authenticated/manufacturers'
     | '/_authenticated/search'
+    | '/_authenticated/settings'
+    | '/_authenticated/sources'
     | '/_authenticated/assemblies/$assemblyId'
     | '/_authenticated/catalogs/$catalogId'
     | '/_authenticated/models/$modelId'
@@ -213,6 +261,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -227,6 +282,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEquipmentRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/import': {
+      id: '/_authenticated/import'
+      path: '/import'
+      fullPath: '/import'
+      preLoaderRoute: typeof AuthenticatedImportRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/manufacturers': {
       id: '/_authenticated/manufacturers'
       path: '/manufacturers'
@@ -239,6 +301,20 @@ declare module '@tanstack/react-router' {
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof AuthenticatedSearchRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sources': {
+      id: '/_authenticated/sources'
+      path: '/sources'
+      fullPath: '/sources'
+      preLoaderRoute: typeof AuthenticatedSourcesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/assemblies/$assemblyId': {
@@ -287,10 +363,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEquipmentRoute: typeof AuthenticatedEquipmentRoute
+  AuthenticatedImportRoute: typeof AuthenticatedImportRoute
   AuthenticatedManufacturersRoute: typeof AuthenticatedManufacturersRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSourcesRoute: typeof AuthenticatedSourcesRoute
   AuthenticatedAssembliesAssemblyIdRoute: typeof AuthenticatedAssembliesAssemblyIdRoute
   AuthenticatedCatalogsCatalogIdRoute: typeof AuthenticatedCatalogsCatalogIdRoute
   AuthenticatedModelsModelIdRoute: typeof AuthenticatedModelsModelIdRoute
@@ -300,10 +380,14 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEquipmentRoute: AuthenticatedEquipmentRoute,
+  AuthenticatedImportRoute: AuthenticatedImportRoute,
   AuthenticatedManufacturersRoute: AuthenticatedManufacturersRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSourcesRoute: AuthenticatedSourcesRoute,
   AuthenticatedAssembliesAssemblyIdRoute:
     AuthenticatedAssembliesAssemblyIdRoute,
   AuthenticatedCatalogsCatalogIdRoute: AuthenticatedCatalogsCatalogIdRoute,
