@@ -1212,8 +1212,28 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_external_payload: {
+        Args: {
+          p_duplicate_strategy?: string
+          p_link_model_id?: string
+          p_payload: Json
+          p_source_id: string
+        }
+        Returns: Json
+      }
       normalize_code: { Args: { input: string }; Returns: string }
       normalize_text: { Args: { input: string }; Returns: string }
+      search_serial_model_ids: {
+        Args: {
+          p_equipment_type_id?: string
+          p_manufacturer_id?: string
+          p_query: string
+        }
+        Returns: {
+          machine_model_id: string
+          match_rank: number
+        }[]
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
