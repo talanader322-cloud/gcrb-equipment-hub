@@ -128,10 +128,20 @@ export class DemoConnector implements SourceConnector {
   }
 
   async getResultDetails(externalId: string): Promise<OnlineResult | null> {
+    // Generic echo records encode their query code in the id, so rebuild them
+    // directly instead of searching the fixture set.
+    const generic = externalId.startsWith("demo-generic-")
+      ? externalId.slice("demo-generic-".length)
+      : null;
+    if (generic) {
+      const found = await this.search(generic, {});
+      return found.find((r) => r.externalId === externalId) ?? null;
+    }
     const all = await this.search("GD511A-1", {});
     const parts = await this.search("23A-15-00053", {});
     return [...all, ...parts].find((r) => r.externalId === externalId) ?? null;
   }
+
 
   async getCatalogMetadata(externalId: string): Promise<CatalogMetadata | null> {
     const result = await this.getResultDetails(externalId);
