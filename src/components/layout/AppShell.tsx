@@ -94,7 +94,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   const systemNav: NavItem[] = [
-    ...(access.data?.isAdmin ? [{ to: "/admin", labelKey: "nav.administration" as TranslationKey, icon: Shield }] : []),
+    ...(access.data?.isAdmin
+      ? [{ to: "/admin", labelKey: "nav.administration" as TranslationKey, icon: Shield }]
+      : []),
     { to: "/settings", labelKey: "nav.settings", icon: Cog },
   ];
 
@@ -119,7 +121,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-sidebar-foreground">{t("app.name")}</p>
+              <p className="truncate text-sm font-semibold text-sidebar-foreground">
+                {t("app.name")}
+              </p>
               <p className="truncate text-[11px] text-muted-foreground">{t("app.org")}</p>
             </div>
           )}
@@ -160,8 +164,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="border-t border-sidebar-border p-2">
-          <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={() => setCollapsed((v) => !v)}>
-            {dir === "rtl" ? <ChevronsRight className="size-4" /> : <ChevronsLeft className="size-4" />}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2"
+            onClick={() => setCollapsed((v) => !v)}
+          >
+            {dir === "rtl" ? (
+              <ChevronsRight className="size-4" />
+            ) : (
+              <ChevronsLeft className="size-4" />
+            )}
             {!collapsed && <span>{t("top.collapseSidebar")}</span>}
           </Button>
         </div>
@@ -198,7 +211,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Button>
             <Separator orientation="vertical" className="h-6" />
             <div className="hidden text-end sm:block">
-              <p className="text-xs font-medium">{access.data?.profile?.full_name ?? access.data?.profile?.username ?? "—"}</p>
+              <p className="text-xs font-medium">
+                {access.data?.profile?.full_name ?? access.data?.profile?.username ?? "—"}
+              </p>
               <p className="text-[11px] text-muted-foreground">
                 {access.data?.roles[0] ? t(`role.${access.data.roles[0]}` as TranslationKey) : ""}
               </p>

@@ -18,7 +18,10 @@ const PART_SELECT = "*, manufacturer:manufacturers(id,name,slug)";
 const LIMIT = 50;
 
 type RpcClient = {
-  rpc(name: string, args?: Record<string, unknown>): PromiseLike<{
+  rpc(
+    name: string,
+    args?: Record<string, unknown>,
+  ): PromiseLike<{
     data: unknown;
     error: { message: string } | null;
   }>;
@@ -42,7 +45,11 @@ async function searchSerialModelIds(query: string, filters: SearchFilters): Prom
   return (data as SerialModelRow[]).map((row) => row.machine_model_id);
 }
 
-async function searchModels(raw: string, code: string, filters: SearchFilters): Promise<ModelResult[]> {
+async function searchModels(
+  raw: string,
+  code: string,
+  filters: SearchFilters,
+): Promise<ModelResult[]> {
   const text = sanitize(raw);
   const found = new Map<string, ModelResult>();
 
@@ -92,12 +99,18 @@ async function searchModels(raw: string, code: string, filters: SearchFilters): 
     const aExact = normalizeCode(a.model_name) === code ? 1 : 0;
     const bExact = normalizeCode(b.model_name) === code ? 1 : 0;
     if (aExact !== bExact) return bExact - aExact;
-    return (serialOrder.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
-      (serialOrder.get(b.id) ?? Number.MAX_SAFE_INTEGER);
+    return (
+      (serialOrder.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+      (serialOrder.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+    );
   });
 }
 
-async function searchParts(raw: string, code: string, filters: SearchFilters): Promise<PartResult[]> {
+async function searchParts(
+  raw: string,
+  code: string,
+  filters: SearchFilters,
+): Promise<PartResult[]> {
   const text = sanitize(raw);
   const upper = normalizeText(text);
   const found = new Map<string, PartResult>();
@@ -130,7 +143,8 @@ async function searchParts(raw: string, code: string, filters: SearchFilters): P
   );
   if (missing.length > 0) {
     let extraQuery = supabase.from("parts").select(PART_SELECT).in("id", missing).limit(LIMIT);
-    if (filters.manufacturerId) extraQuery = extraQuery.eq("manufacturer_id", filters.manufacturerId);
+    if (filters.manufacturerId)
+      extraQuery = extraQuery.eq("manufacturer_id", filters.manufacturerId);
     const extra = await extraQuery;
     if (extra.error) throw new Error(extra.error.message);
     for (const row of (extra.data ?? []) as PartResult[]) found.set(row.id, row);
@@ -153,7 +167,11 @@ async function searchParts(raw: string, code: string, filters: SearchFilters): P
   return ranked.filter((p) => allowed.has(p.id));
 }
 
-async function searchCatalogs(raw: string, code: string, filters: SearchFilters): Promise<CatalogResult[]> {
+async function searchCatalogs(
+  raw: string,
+  code: string,
+  filters: SearchFilters,
+): Promise<CatalogResult[]> {
   const text = sanitize(raw);
   const upper = normalizeText(text);
   let q = supabase

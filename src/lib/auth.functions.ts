@@ -12,9 +12,7 @@ function clientKey(): string | null {
   const header = request?.headers;
   if (!header) return null;
   return (
-    header.get("cf-connecting-ip") ??
-    header.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    null
+    header.get("cf-connecting-ip") ?? header.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null
   );
 }
 

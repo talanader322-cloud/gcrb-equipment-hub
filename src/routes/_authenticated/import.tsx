@@ -53,7 +53,10 @@ function ImportPage() {
     queryKey: ["temporary-results"],
     queryFn: () => sourcesRepository.listTemporaryResults(),
   });
-  const jobs = useQuery({ queryKey: ["import-jobs"], queryFn: () => adminRepository.listImportJobs() });
+  const jobs = useQuery({
+    queryKey: ["import-jobs"],
+    queryFn: () => adminRepository.listImportJobs(),
+  });
 
   const previewQuery = useQuery({
     queryKey: ["import-preview", sourceId, externalId],
@@ -206,7 +209,9 @@ function ImportPage() {
                 </TableBody>
               </Table>
               {jobs.data?.length === 0 && (
-                <p className="p-6 text-center text-sm text-muted-foreground">{t("import.noJobs")}</p>
+                <p className="p-6 text-center text-sm text-muted-foreground">
+                  {t("import.noJobs")}
+                </p>
               )}
             </CardContent>
           </Card>

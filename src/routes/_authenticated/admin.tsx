@@ -257,9 +257,7 @@ function AdminPage() {
                   <TableCell className="text-sm">
                     <div className="flex items-center gap-2">
                       {row.full_name ?? "—"}
-                      {row.id === user?.id && (
-                        <Badge variant="secondary">{t("entity.you")}</Badge>
-                      )}
+                      {row.id === user?.id && <Badge variant="secondary">{t("entity.you")}</Badge>}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -293,9 +291,7 @@ function AdminPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() =>
-                            active.mutate({ userId: row.id, active: !row.active })
-                          }
+                          onClick={() => active.mutate({ userId: row.id, active: !row.active })}
                         >
                           {row.active ? t("users.deactivate") : t("users.activate")}
                         </Button>
@@ -313,9 +309,7 @@ function AdminPage() {
                           <Button
                             size="sm"
                             disabled={newPassword.length < 8 || reset.isPending}
-                            onClick={() =>
-                              reset.mutate({ userId: row.id, password: newPassword })
-                            }
+                            onClick={() => reset.mutate({ userId: row.id, password: newPassword })}
                           >
                             {t("action.confirm")}
                           </Button>

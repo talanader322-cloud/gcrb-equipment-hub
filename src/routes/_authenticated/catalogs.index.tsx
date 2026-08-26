@@ -124,7 +124,9 @@ function CatalogsPage() {
                   {row.catalog_number ?? "—"} · {row.manufacturer?.name}
                 </p>
                 <div className="flex flex-wrap gap-1">
-                  <Badge variant="outline">{t(`catalogType.${row.catalog_type}` as TranslationKey)}</Badge>
+                  <Badge variant="outline">
+                    {t(`catalogType.${row.catalog_type}` as TranslationKey)}
+                  </Badge>
                   <Badge variant="secondary">{row.language.toUpperCase()}</Badge>
                   {row.serial_from && (
                     <Badge variant="outline" className="font-mono">

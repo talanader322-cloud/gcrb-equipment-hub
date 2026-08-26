@@ -88,11 +88,15 @@ function SourcesPage() {
               <Row label={t("sources.baseUrl")} value={source.base_url ?? "—"} mono />
               <Row
                 label={t("sources.requiresAuth")}
-                value={source.requires_authentication ? t("sources.enabled") : t("sources.disabled")}
+                value={
+                  source.requires_authentication ? t("sources.enabled") : t("sources.disabled")
+                }
               />
               <Row
                 label={t("sources.lastSuccess")}
-                value={source.last_success_at ? formatDate(source.last_success_at) : t("sources.never")}
+                value={
+                  source.last_success_at ? formatDate(source.last_success_at) : t("sources.never")
+                }
               />
               {source.last_error && (
                 <p className="rounded-md bg-destructive/10 p-2 font-mono text-destructive">

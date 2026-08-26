@@ -39,7 +39,10 @@ export const Route = createFileRoute("/_authenticated/search")({
   head: () => ({
     meta: [
       { title: "البحث الشامل | GCRB Equipment Catalog" },
-      { name: "description", content: "Universal search across models, serials, parts and catalogs." },
+      {
+        name: "description",
+        content: "Universal search across models, serials, parts and catalogs.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -65,8 +68,7 @@ function SearchPage() {
   const local = useQuery({
     queryKey: ["local-search", q, scope, manufacturerId],
     enabled: q.length > 0,
-    queryFn: () =>
-      searchService.searchLocal(q, scope, manufacturerId ? { manufacturerId } : {}),
+    queryFn: () => searchService.searchLocal(q, scope, manufacturerId ? { manufacturerId } : {}),
   });
 
   const onlineSearch = useMutation({
@@ -181,7 +183,9 @@ function SearchPage() {
 
       {!q && <p className="text-sm text-muted-foreground">{t("search.emptyQuery")}</p>}
       {local.isLoading && <Skeleton className="h-40 w-full" />}
-      {local.isError && <p className="text-sm text-destructive">{(local.error as Error).message}</p>}
+      {local.isError && (
+        <p className="text-sm text-destructive">{(local.error as Error).message}</p>
+      )}
 
       {results && results.total === 0 && (
         <Card>
@@ -267,7 +271,10 @@ function SearchPage() {
       {online.length > 0 && (
         <ResultGroup title={t("search.groupOnline")}>
           {online.map((row) => (
-            <div key={`${row.sourceId}-${row.externalId}`} className="rounded-md border border-dashed border-border p-3">
+            <div
+              key={`${row.sourceId}-${row.externalId}`}
+              className="rounded-md border border-dashed border-border p-3"
+            >
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-semibold">{row.title}</p>
                 <Badge variant="outline">{t("state.temporary")}</Badge>

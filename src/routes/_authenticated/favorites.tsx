@@ -5,10 +5,7 @@ import { EntityLinkList } from "@/components/EntityLinkList";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/lib/i18n";
-import {
-  personalRepository,
-  type EntityType,
-} from "@/services/repositories/personalRepository";
+import { personalRepository, type EntityType } from "@/services/repositories/personalRepository";
 
 export const Route = createFileRoute("/_authenticated/favorites")({
   head: () => ({

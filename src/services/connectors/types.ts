@@ -24,12 +24,7 @@ export interface SourceConnector {
 }
 
 export type ConnectorCategory =
-  | "api"
-  | "public_catalog"
-  | "authorized_feed"
-  | "manual_url"
-  | "pdf_source"
-  | "demo";
+  "api" | "public_catalog" | "authorized_feed" | "manual_url" | "pdf_source" | "demo";
 
 export type CatalogMetadata = {
   manufacturer: string | null;

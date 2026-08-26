@@ -22,7 +22,10 @@ export const Route = createFileRoute("/_authenticated/models/$modelId")({
   head: () => ({
     meta: [
       { title: "بطاقة الموديل | GCRB Equipment Catalog" },
-      { name: "description", content: "Machine model details, serial ranges and related catalogs." },
+      {
+        name: "description",
+        content: "Machine model details, serial ranges and related catalogs.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -55,11 +58,15 @@ function ModelPage() {
         <Badge variant="outline">{row.manufacturer?.name}</Badge>
         {row.equipment_type && (
           <Badge variant="secondary">
-            {locale === "ar" ? row.equipment_type.name_ar ?? row.equipment_type.name : row.equipment_type.name}
+            {locale === "ar"
+              ? (row.equipment_type.name_ar ?? row.equipment_type.name)
+              : row.equipment_type.name}
           </Badge>
         )}
       </div>
-      {row.description && <p className="max-w-3xl text-sm text-muted-foreground">{row.description}</p>}
+      {row.description && (
+        <p className="max-w-3xl text-sm text-muted-foreground">{row.description}</p>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -67,7 +74,9 @@ function ModelPage() {
             <CardTitle className="text-base">{t("entity.serialRanges")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {serialRanges.length === 0 && <p className="text-sm text-muted-foreground">{t("state.none")}</p>}
+            {serialRanges.length === 0 && (
+              <p className="text-sm text-muted-foreground">{t("state.none")}</p>
+            )}
             {serialRanges.map((range) => (
               <div key={range.id} className="rounded-md border border-border p-2">
                 <p className="font-mono text-sm">
@@ -85,7 +94,9 @@ function ModelPage() {
             <CardTitle className="text-base">{t("entity.aliases")}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
-            {aliases.length === 0 && <p className="text-sm text-muted-foreground">{t("state.none")}</p>}
+            {aliases.length === 0 && (
+              <p className="text-sm text-muted-foreground">{t("state.none")}</p>
+            )}
             {aliases.map((alias) => (
               <Badge key={alias.id} variant="outline" className="font-mono">
                 {alias.alias}
@@ -100,7 +111,9 @@ function ModelPage() {
           <CardTitle className="text-base">{t("entity.catalogs")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 md:grid-cols-2">
-          {catalogs.length === 0 && <p className="text-sm text-muted-foreground">{t("state.empty")}</p>}
+          {catalogs.length === 0 && (
+            <p className="text-sm text-muted-foreground">{t("state.empty")}</p>
+          )}
           {catalogs.map((catalog) => (
             <Link
               key={catalog.id}
@@ -132,17 +145,31 @@ function ModelPage() {
             </TableHeader>
             <TableBody>
               {compatibility.map((item) => {
-                const part = (item as { part: { id: string; primary_part_number: string; description: string | null } | null }).part;
+                const part = (
+                  item as {
+                    part: {
+                      id: string;
+                      primary_part_number: string;
+                      description: string | null;
+                    } | null;
+                  }
+                ).part;
                 if (!part) return null;
                 return (
                   <TableRow key={item.id}>
                     <TableCell className="font-mono">
-                      <Link to="/parts/$partId" params={{ partId: part.id }} className="text-primary hover:underline">
+                      <Link
+                        to="/parts/$partId"
+                        params={{ partId: part.id }}
+                        className="text-primary hover:underline"
+                      >
                         {part.primary_part_number}
                       </Link>
                     </TableCell>
                     <TableCell className="text-sm">{part.description ?? "—"}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{item.notes ?? "—"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {item.notes ?? "—"}
+                    </TableCell>
                   </TableRow>
                 );
               })}

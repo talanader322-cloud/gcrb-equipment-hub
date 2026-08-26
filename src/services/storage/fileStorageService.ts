@@ -8,11 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
  * UI components must never talk to a storage SDK directly.
  */
 export type StorageBucket =
-  | "catalogs"
-  | "diagrams"
-  | "thumbnails"
-  | "manufacturer-logos"
-  | "machine-images";
+  "catalogs" | "diagrams" | "thumbnails" | "manufacturer-logos" | "machine-images";
 
 export type StoredObject = {
   provider: string;
@@ -50,7 +46,11 @@ class CloudFileStorageService implements FileStorageService {
     };
   }
 
-  async getSignedUrl(bucket: StorageBucket, path: string, expiresInSeconds = 3600): Promise<string> {
+  async getSignedUrl(
+    bucket: StorageBucket,
+    path: string,
+    expiresInSeconds = 3600,
+  ): Promise<string> {
     const { data, error } = await supabase.storage
       .from(bucket)
       .createSignedUrl(path, expiresInSeconds);
