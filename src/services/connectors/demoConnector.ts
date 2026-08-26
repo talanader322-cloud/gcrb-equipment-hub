@@ -3,13 +3,8 @@ import type { OnlineResult, SearchFilters } from "@/lib/types";
 
 import type { CatalogMetadata, ConnectorContext, ImportPayload, SourceConnector } from "./types";
 
-/**
- * DEMO connector — clearly marked synthetic source.
- *
- * Its only purpose is to validate the online-search / preview / import /
- * duplicate-detection architecture. It performs no network requests and must
- * never be presented as real live external data.
- */
+/** Development-only connector. It never returns results in production and
+ * never fabricates a generic match for an unknown query. */
 export class DemoConnector implements SourceConnector {
   readonly category = "demo" as const;
   readonly isDemo = true;
@@ -43,84 +38,36 @@ export class DemoConnector implements SourceConnector {
   }
 
   async search(query: string, _filters: SearchFilters): Promise<OnlineResult[]> {
+    if (import.meta.env.PROD) return [];
     const q = query.trim();
     if (!q) return [];
     const code = normalizeCode(q);
     const results: OnlineResult[] = [];
 
-    // Known validation fixtures ------------------------------------------------
     if (code.startsWith("GD511")) {
       results.push({
-        ...this.base(`demo-catalog-gd511a1-parts`),
-        resultType: "catalog",
+        ...this.base("demo-catalog-gd511a1-parts"),
         title: "KOMATSU GD511A-1 Parts Catalog",
         manufacturer: "Komatsu",
         model: "GD511A-1",
         equipmentType: "Motor Grader",
         serialRange: "10001-UP",
         catalogType: "parts_catalog",
-        description: "Demo parts catalog metadata for the GD511A-1 motor grader.",
-      });
-      results.push({
-        ...this.base(`demo-catalog-gd511a1-service`),
-        resultType: "catalog",
-        title: "KOMATSU GD511A-1 Shop / Service Manual",
-        manufacturer: "Komatsu",
-        model: "GD511A-1",
-        equipmentType: "Motor Grader",
-        serialRange: "10001-UP",
-        catalogType: "service_manual",
-        description: "Demo service manual metadata for the GD511A-1 motor grader.",
-      });
-      results.push({
-        ...this.base(`demo-model-gd655-5`),
-        resultType: "model",
-        title: "KOMATSU GD655-5 Motor Grader",
-        manufacturer: "Komatsu",
-        model: "GD655-5",
-        equipmentType: "Motor Grader",
-        serialRange: "50001-UP",
-        catalogType: null,
-        description: "Demo equipment model discovered online (not yet in the local database).",
+        description: "Development fixture only.",
       });
     }
 
     if (code.startsWith("23A15") || code.includes("TRANSMISSION")) {
       results.push({
-        ...this.base(`demo-part-23A1500053`),
+        ...this.base("demo-part-23A1500053"),
         resultType: "part",
         title: "23A-15-00053 TRANSMISSION ASS'Y",
         manufacturer: "Komatsu",
         model: "GD511A-1",
         equipmentType: "Motor Grader",
         partNumber: "23A-15-00053",
-        description: "TRANSMISSION ASS'Y",
+        description: "Development fixture only.",
         catalogType: null,
-      });
-      results.push({
-        ...this.base(`demo-part-23A1500061`),
-        resultType: "part",
-        title: "23A-15-00061 TRANSMISSION ASS'Y (alternate)",
-        manufacturer: "Komatsu",
-        model: "GD511A-1",
-        equipmentType: "Motor Grader",
-        partNumber: "23A-15-00061",
-        description: "TRANSMISSION ASS'Y",
-        catalogType: null,
-      });
-    }
-
-    // Generic echo result so any query demonstrates the workflow ---------------
-    if (results.length === 0) {
-      results.push({
-        ...this.base(`demo-generic-${code || "query"}`),
-        resultType: "catalog",
-        title: `Demo catalog record matching "${q}"`,
-        manufacturer: "Komatsu",
-        model: q.toUpperCase(),
-        equipmentType: null,
-        catalogType: "technical_manual",
-        description: "Synthetic demo record generated to validate the online search workflow.",
       });
     }
 
@@ -128,20 +75,13 @@ export class DemoConnector implements SourceConnector {
   }
 
   async getResultDetails(externalId: string): Promise<OnlineResult | null> {
-    // Generic echo records encode their query code in the id, so rebuild them
-    // directly instead of searching the fixture set.
-    const generic = externalId.startsWith("demo-generic-")
-      ? externalId.slice("demo-generic-".length)
-      : null;
-    if (generic) {
-      const found = await this.search(generic, {});
-      return found.find((r) => r.externalId === externalId) ?? null;
-    }
-    const all = await this.search("GD511A-1", {});
-    const parts = await this.search("23A-15-00053", {});
-    return [...all, ...parts].find((r) => r.externalId === externalId) ?? null;
+    if (import.meta.env.PROD) return null;
+    const all = [
+      ...(await this.search("GD511A-1", {})),
+      ...(await this.search("23A-15-00053", {})),
+    ];
+    return all.find((result) => result.externalId === externalId) ?? null;
   }
-
 
   async getCatalogMetadata(externalId: string): Promise<CatalogMetadata | null> {
     const result = await this.getResultDetails(externalId);
@@ -161,7 +101,7 @@ export class DemoConnector implements SourceConnector {
   }
 
   canImport(result: OnlineResult): boolean {
-    return result.importable && result.isDemo;
+    return !import.meta.env.PROD && result.importable && result.isDemo;
   }
 
   importMetadata(result: OnlineResult): ImportPayload {
@@ -188,8 +128,10 @@ export class DemoConnector implements SourceConnector {
 
   async testConnection(): Promise<{ ok: boolean; message: string }> {
     return {
-      ok: true,
-      message: "Demo connector is operational (synthetic data, no network request performed).",
+      ok: !import.meta.env.PROD,
+      message: import.meta.env.PROD
+        ? "Demo connector is disabled in production."
+        : "Demo connector is available for development fixtures only.",
     };
   }
 }
