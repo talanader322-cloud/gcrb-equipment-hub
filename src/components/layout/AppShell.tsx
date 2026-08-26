@@ -90,7 +90,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     event.preventDefault();
     const q = term.trim();
     if (!q) return;
-    navigate({ to: "/search", search: { q, scope: "all" } });
+    navigate({ to: "/search", search: { q, scope: "all", manufacturerId: "" } });
   }
 
   const systemNav: NavItem[] = [
