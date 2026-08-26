@@ -29,9 +29,12 @@ const SCOPES: SearchScope[] = ["all", "models", "parts", "catalogs", "assemblies
 
 export const Route = createFileRoute("/_authenticated/search")({
   validateSearch: (search: Record<string, unknown>) => ({
-    q: typeof search.q === "string" ? search.q : "",
-    scope: SCOPES.includes(search.scope as SearchScope) ? (search.scope as SearchScope) : "all",
-    manufacturerId: typeof search.manufacturerId === "string" ? search.manufacturerId : "",
+    q: typeof search["q"] === "string" ? (search["q"] as string) : "",
+    scope: SCOPES.includes(search["scope"] as SearchScope)
+      ? (search["scope"] as SearchScope)
+      : ("all" as SearchScope),
+    manufacturerId:
+      typeof search["manufacturerId"] === "string" ? (search["manufacturerId"] as string) : "",
   }),
   head: () => ({
     meta: [

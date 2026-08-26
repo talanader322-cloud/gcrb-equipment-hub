@@ -128,7 +128,7 @@ function Dashboard() {
                   <Link
                     key={item.id}
                     to="/search"
-                    search={{ q: item.query, scope: "all" }}
+                    search={{ q: item.query, scope: "all", manufacturerId: "" }}
                     className="block truncate font-mono text-xs text-primary hover:underline"
                   >
                     {item.query}
