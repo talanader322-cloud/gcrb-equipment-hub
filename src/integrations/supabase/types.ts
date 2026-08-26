@@ -127,6 +127,30 @@ export type Database = {
           },
         ]
       }
+      auth_login_attempts: {
+        Row: {
+          attempted_at: string
+          client_key: string | null
+          id: string
+          success: boolean
+          username: string
+        }
+        Insert: {
+          attempted_at?: string
+          client_key?: string | null
+          id?: string
+          success?: boolean
+          username: string
+        }
+        Update: {
+          attempted_at?: string
+          client_key?: string | null
+          id?: string
+          success?: boolean
+          username?: string
+        }
+        Relationships: []
+      }
       catalog_files: {
         Row: {
           catalog_id: string
@@ -1028,6 +1052,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active: boolean
           created_at: string
           department: string | null
           email: string | null
@@ -1036,8 +1061,10 @@ export type Database = {
           job_title: string | null
           locale: string
           updated_at: string
+          username: string | null
         }
         Insert: {
+          active?: boolean
           created_at?: string
           department?: string | null
           email?: string | null
@@ -1046,8 +1073,10 @@ export type Database = {
           job_title?: string | null
           locale?: string
           updated_at?: string
+          username?: string | null
         }
         Update: {
+          active?: boolean
           created_at?: string
           department?: string | null
           email?: string | null
@@ -1056,6 +1085,7 @@ export type Database = {
           job_title?: string | null
           locale?: string
           updated_at?: string
+          username?: string | null
         }
         Relationships: []
       }
