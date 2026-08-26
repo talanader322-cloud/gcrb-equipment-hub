@@ -198,7 +198,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Button>
             <Separator orientation="vertical" className="h-6" />
             <div className="hidden text-end sm:block">
-              <p className="text-xs font-medium">{access.data?.profile?.full_name ?? user?.email}</p>
+              <p className="text-xs font-medium">{access.data?.profile?.full_name ?? access.data?.profile?.username ?? "—"}</p>
               <p className="text-[11px] text-muted-foreground">
                 {access.data?.roles[0] ? t(`role.${access.data.roles[0]}` as TranslationKey) : ""}
               </p>
