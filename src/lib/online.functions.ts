@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { ExternalSource, OnlineResult, SearchFilters } from "@/lib/types";
 import { getConnector } from "@/services/connectors/registry";
-import { detectDuplicates, importPayload } from "@/services/importService.server";
+import { detectDuplicates } from "@/services/importService.server";
 
 const filtersSchema = z.object({
   manufacturerId: z.string().optional(),
