@@ -21,6 +21,7 @@ type I18nValue = {
   setLocale: (locale: Locale) => void;
   toggleLocale: () => void;
   t: (key: TranslationKey, vars?: Record<string, string | number>) => string;
+  formatDate: (value: string | null | undefined) => string;
   appName: string;
 };
 
@@ -57,6 +58,16 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       setLocale,
       toggleLocale: () => setLocale(locale === "ar" ? "en" : "ar"),
       appName: table["app.name"],
+      formatDate: (value) => {
+        if (!value) return "—";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "—";
+        return new Intl.DateTimeFormat(locale === "ar" ? "ar-SY" : "en-GB", {
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+        }).format(date);
+      },
       t: (key, vars) => {
         let text = table[key] ?? dictionary.en[key] ?? key;
         if (vars) {

@@ -106,7 +106,7 @@ function ImportPage() {
                     </p>
                     <div className="rounded-md border border-border p-3 text-xs">
                       <p className="font-medium">{t("import.duplicateCheck")}</p>
-                      {previewQuery.data.duplicates.length > 0 ? (
+                      {Object.values(previewQuery.data.duplicates).some(Boolean) ? (
                         <p className="text-muted-foreground">{t("import.duplicateFound")}</p>
                       ) : (
                         <p className="text-muted-foreground">{t("import.noDuplicate")}</p>
