@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { AppRole, ImportJob, Profile, Tables } from "@/lib/types";
+import type { ImportJob, Tables } from "@/lib/types";
 
 type Update<T extends keyof Tables> = Tables[T]["Update"];
 
