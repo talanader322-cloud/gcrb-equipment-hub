@@ -105,9 +105,3 @@ export const setUsername = createServerFn({ method: "POST" })
     await updateManagedUsername(data.userId, data.username);
     return { ok: true };
   });
-
-/** Idempotent: creates the initial system administrator once, from a stored secret. */
-export const ensureBootstrapAdmin = createServerFn({ method: "POST" }).handler(async () => {
-  const { ensureBootstrapAdminServer } = await import("@/services/authService.server");
-  return ensureBootstrapAdminServer();
-});
