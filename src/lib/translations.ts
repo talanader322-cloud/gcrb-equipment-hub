@@ -128,6 +128,10 @@ export const en = {
   "filter.onlineOnly": "Online",
 
   // entities
+  "entity.name": "Name",
+  "entity.email": "Email",
+  "entity.createdAt": "Created",
+  "entity.you": "You",
   "entity.manufacturer": "Manufacturer",
   "entity.equipmentType": "Equipment type",
   "entity.model": "Model",
@@ -428,6 +432,10 @@ export const ar: Record<TranslationKey, string> = {
   "filter.local": "محلي",
   "filter.onlineOnly": "إلكتروني",
 
+  "entity.name": "الاسم",
+  "entity.email": "البريد الإلكتروني",
+  "entity.createdAt": "تاريخ الإنشاء",
+  "entity.you": "أنت",
   "entity.manufacturer": "الشركة المصنعة",
   "entity.equipmentType": "نوع المعدة",
   "entity.model": "الموديل",
