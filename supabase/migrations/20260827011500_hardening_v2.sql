@@ -1,17 +1,8 @@
 -- =========================================================
 -- GCRB Equipment Catalog - production hardening v2
 -- Preserves Lovable username authentication and admin2.
+-- Storage buckets are managed through Lovable/Supabase Storage API.
 -- =========================================================
-
--- Required private storage buckets.
-INSERT INTO storage.buckets (id, name, public, file_size_limit)
-VALUES
-  ('catalogs', 'catalogs', false, 524288000),
-  ('diagrams', 'diagrams', false, 52428800),
-  ('thumbnails', 'thumbnails', false, 10485760),
-  ('manufacturer-logos', 'manufacturer-logos', false, 10485760),
-  ('machine-images', 'machine-images', false, 20971520)
-ON CONFLICT (id) DO NOTHING;
 
 -- OEM-aware normalized uniqueness.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_machine_models_manufacturer_normalized
