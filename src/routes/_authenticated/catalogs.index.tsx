@@ -17,7 +17,7 @@ import { CATALOG_TYPES } from "@/lib/types";
 import { catalogRepository } from "@/services/repositories/catalogRepository";
 import type { TranslationKey } from "@/lib/translations";
 
-export const Route = createFileRoute("/_authenticated/catalogs")({
+export const Route = createFileRoute("/_authenticated/catalogs/")({
   validateSearch: (search: Record<string, unknown>) => ({
     q: typeof search["q"] === "string" ? (search["q"] as string) : "",
     catalogType: typeof search["catalogType"] === "string" ? (search["catalogType"] as string) : "",

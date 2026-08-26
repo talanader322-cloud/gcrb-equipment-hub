@@ -51,7 +51,7 @@ function ManufacturersPage() {
               )}
               <Link
                 to="/equipment"
-                search={{ manufacturerId: row.id }}
+                search={{ manufacturerId: row.id, equipmentTypeId: "", q: "" }}
                 className="inline-block text-xs font-medium text-primary hover:underline"
               >
                 {t("action.viewAll")}
