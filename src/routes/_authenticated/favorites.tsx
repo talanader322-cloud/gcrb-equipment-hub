@@ -5,7 +5,10 @@ import { EntityLinkList } from "@/components/EntityLinkList";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/lib/i18n";
-import { personalRepository } from "@/services/repositories/personalRepository";
+import {
+  personalRepository,
+  type EntityType,
+} from "@/services/repositories/personalRepository";
 
 export const Route = createFileRoute("/_authenticated/favorites")({
   head: () => ({
@@ -35,7 +38,7 @@ function FavoritesPage() {
             items={
               favorites.data?.map((row) => ({
                 id: row.id,
-                entityType: row.entity_type,
+                entityType: row.entity_type as EntityType,
                 entityId: row.entity_id,
                 timestamp: row.created_at,
               })) ?? []
