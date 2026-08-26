@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 
 import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/lib/i18n";
-import type { EntityType } from "@/lib/types";
+import type { EntityType } from "@/services/repositories/personalRepository";
 
 export type EntityLinkItem = {
   id: string;
