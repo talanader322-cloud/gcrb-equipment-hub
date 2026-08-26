@@ -10,8 +10,8 @@ type Client = SupabaseClient<Database>;
  * Import service (server-only).
  *
  * Maps a connector's neutral ImportPayload into corporation database records.
- * Duplicate detection always uses normalized identifiers so the same
- * manufacturer / model / catalog / part is never created twice.
+ * Duplicate detection is scoped by manufacturer (and model where applicable)
+ * so identical model/part numbers from different OEMs are never conflated.
  */
 
 export type DuplicateReport = {
@@ -28,6 +28,66 @@ function slugify(value: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
+async function findManufacturer(db: Client, name: string) {
+  const slug = slugify(name);
+  const { data, error } = await db
+    .from("manufacturers")
+    .select("id,name,slug")
+    .or(`slug.eq.${slug},name.ilike.${name}`)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+async function findModel(db: Client, manufacturerId: string, modelName: string) {
+  const { data, error } = await db
+    .from("machine_models")
+    .select("id,model_name")
+    .eq("manufacturer_id", manufacturerId)
+    .eq("normalized_model_name", normalizeCode(modelName))
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+async function findPart(db: Client, manufacturerId: string, partNumber: string) {
+  const { data, error } = await db
+    .from("parts")
+    .select("id,primary_part_number")
+    .eq("manufacturer_id", manufacturerId)
+    .eq("normalized_part_number", normalizeCode(partNumber))
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+async function findCatalog(
+  db: Client,
+  payload: ImportPayload,
+  manufacturerId: string,
+  modelId: string | null,
+) {
+  let query = db.from("catalogs").select("id,title").eq("manufacturer_id", manufacturerId);
+
+  if (modelId) query = query.eq("machine_model_id", modelId);
+  if (payload.catalogNumber) {
+    query = query.eq("normalized_catalog_number", normalizeCode(payload.catalogNumber));
+  } else if (payload.catalogTitle) {
+    query = query.eq("normalized_title", normalizeText(payload.catalogTitle));
+  } else {
+    return null;
+  }
+
+  if (payload.revision) query = query.eq("revision", payload.revision);
+
+  const { data, error } = await query.limit(1).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function detectDuplicates(
   db: Client,
   payload: ImportPayload,
@@ -39,59 +99,31 @@ export async function detectDuplicates(
     part: null,
   };
 
-  if (payload.manufacturerName) {
-    const slug = slugify(payload.manufacturerName);
-    const { data } = await db
-      .from("manufacturers")
-      .select("id,name,slug")
-      .or(`slug.eq.${slug},name.ilike.${payload.manufacturerName}`)
-      .limit(1)
-      .maybeSingle();
-    if (data) report.manufacturer = { id: data.id, name: data.name };
-  }
+  if (!payload.manufacturerName) return report;
+
+  const manufacturer = await findManufacturer(db, payload.manufacturerName);
+  if (!manufacturer) return report;
+
+  report.manufacturer = { id: manufacturer.id, name: manufacturer.name };
 
   if (payload.modelName) {
-    const code = normalizeCode(payload.modelName);
-    const { data } = await db
-      .from("machine_models")
-      .select("id,model_name")
-      .eq("normalized_model_name", code)
-      .limit(1)
-      .maybeSingle();
-    if (data) report.model = data;
-  }
-
-  if (payload.catalogTitle) {
-    const { data } = await db
-      .from("catalogs")
-      .select("id,title")
-      .eq("normalized_title", normalizeText(payload.catalogTitle))
-      .limit(1)
-      .maybeSingle();
-    if (data) report.catalog = data;
+    report.model = await findModel(db, manufacturer.id, payload.modelName);
   }
 
   if (payload.partNumber) {
-    const { data } = await db
-      .from("parts")
-      .select("id,primary_part_number")
-      .eq("normalized_part_number", normalizeCode(payload.partNumber))
-      .limit(1)
-      .maybeSingle();
-    if (data) report.part = data;
+    report.part = await findPart(db, manufacturer.id, payload.partNumber);
+  }
+
+  if (payload.catalogTitle || payload.catalogNumber) {
+    report.catalog = await findCatalog(db, payload, manufacturer.id, report.model?.id ?? null);
   }
 
   return report;
 }
 
 async function ensureManufacturer(db: Client, name: string): Promise<string> {
-  const existing = await db
-    .from("manufacturers")
-    .select("id")
-    .or(`slug.eq.${slugify(name)},name.ilike.${name}`)
-    .limit(1)
-    .maybeSingle();
-  if (existing.data) return existing.data.id;
+  const existing = await findManufacturer(db, name);
+  if (existing) return existing.id;
   const { data, error } = await db
     .from("manufacturers")
     .insert({ name, slug: slugify(name), short_name: name })
@@ -109,6 +141,7 @@ async function ensureEquipmentType(db: Client, name: string | null): Promise<str
     .or(`slug.eq.${slugify(name)},name.ilike.${name}`)
     .limit(1)
     .maybeSingle();
+  if (existing.error) throw new Error(existing.error.message);
   if (existing.data) return existing.data.id;
   const { data, error } = await db
     .from("equipment_types")
@@ -120,7 +153,7 @@ async function ensureEquipmentType(db: Client, name: string | null): Promise<str
 }
 
 export type ImportOptions = {
-  /** "link" reuses the detected duplicate model; "create" adds a new record. */
+  /** "link" reuses the detected duplicate model; "create" is only valid when no duplicate exists. */
   duplicateStrategy: "link" | "create";
   linkModelId?: string | null;
 };
@@ -171,21 +204,12 @@ export async function importPayload(
     const equipmentTypeId = await ensureEquipmentType(db, payload.equipmentTypeName);
 
     if (payload.modelName && outcome.manufacturerId) {
-      const code = normalizeCode(payload.modelName);
       const existing = options.linkModelId
-        ? { data: { id: options.linkModelId } }
-        : await db
-            .from("machine_models")
-            .select("id")
-            .eq("normalized_model_name", code)
-            .limit(1)
-            .maybeSingle();
+        ? { id: options.linkModelId }
+        : await findModel(db, outcome.manufacturerId, payload.modelName);
 
-      if (existing.data && options.duplicateStrategy === "link") {
-        outcome.modelId = existing.data.id;
-        outcome.linked.push("machine_model");
-      } else if (existing.data && options.duplicateStrategy === "create") {
-        outcome.modelId = existing.data.id;
+      if (existing) {
+        outcome.modelId = existing.id;
         outcome.linked.push("machine_model");
       } else {
         const created = await db
@@ -211,8 +235,9 @@ export async function importPayload(
           .eq("display_value", payload.serialDisplay)
           .limit(1)
           .maybeSingle();
+        if (serial.error) throw new Error(serial.error.message);
         if (!serial.data) {
-          await db.from("serial_ranges").insert({
+          const createdSerial = await db.from("serial_ranges").insert({
             machine_model_id: outcome.modelId,
             serial_prefix: null,
             serial_from: payload.serialFrom,
@@ -220,21 +245,16 @@ export async function importPayload(
             display_value: payload.serialDisplay,
             notes: "Imported from an approved external source.",
           });
+          if (createdSerial.error) throw new Error(createdSerial.error.message);
           outcome.created.push("serial_range");
         }
       }
     }
 
     if (payload.partNumber && outcome.manufacturerId) {
-      const code = normalizeCode(payload.partNumber);
-      const existing = await db
-        .from("parts")
-        .select("id")
-        .eq("normalized_part_number", code)
-        .limit(1)
-        .maybeSingle();
-      if (existing.data) {
-        outcome.partId = existing.data.id;
+      const existing = await findPart(db, outcome.manufacturerId, payload.partNumber);
+      if (existing) {
+        outcome.partId = existing.id;
         outcome.linked.push("part");
       } else {
         const created = await db
@@ -250,12 +270,16 @@ export async function importPayload(
         if (created.error) throw new Error(created.error.message);
         outcome.partId = created.data.id;
         outcome.created.push("part");
-        if (code !== normalizeCode(payload.partNumber.replace(/[^A-Za-z0-9]/g, ""))) {
-          // no-op: normalized alias identical
+
+        const normalized = normalizeCode(payload.partNumber);
+        if (normalized && normalized !== payload.partNumber) {
+          const alias = await db.from("part_aliases").insert({
+            part_id: created.data.id,
+            alternate_number: normalized,
+            alias_type: "normalized",
+          });
+          if (alias.error && alias.error.code !== "23505") throw new Error(alias.error.message);
         }
-        await db
-          .from("part_aliases")
-          .insert({ part_id: created.data.id, alternate_number: code, alias_type: "normalized" });
       }
       if (outcome.partId && outcome.modelId) {
         const compat = await db
@@ -265,27 +289,24 @@ export async function importPayload(
           .eq("machine_model_id", outcome.modelId)
           .limit(1)
           .maybeSingle();
+        if (compat.error) throw new Error(compat.error.message);
         if (!compat.data) {
-          await db.from("part_machine_compatibility").insert({
+          const createdCompat = await db.from("part_machine_compatibility").insert({
             part_id: outcome.partId,
             machine_model_id: outcome.modelId,
             notes: payload.serialDisplay ? `Applies to ${payload.serialDisplay}.` : null,
           });
+          if (createdCompat.error) throw new Error(createdCompat.error.message);
         }
       }
     }
 
-    if (!payload.partNumber && payload.catalogTitle && outcome.manufacturerId) {
-      const existing = await db
-        .from("catalogs")
-        .select("id")
-        .eq("normalized_title", normalizeText(payload.catalogTitle))
-        .limit(1)
-        .maybeSingle();
-      if (existing.data) {
-        outcome.catalogId = existing.data.id;
+    if (!payload.partNumber && (payload.catalogTitle || payload.catalogNumber) && outcome.manufacturerId) {
+      const existing = await findCatalog(db, payload, outcome.manufacturerId, outcome.modelId);
+      if (existing) {
+        outcome.catalogId = existing.id;
         outcome.linked.push("catalog");
-      } else {
+      } else if (payload.catalogTitle) {
         const created = await db
           .from("catalogs")
           .insert({
@@ -307,22 +328,25 @@ export async function importPayload(
         outcome.catalogId = created.data.id;
         outcome.created.push("catalog");
         if (outcome.modelId) {
-          await db.from("catalog_machine_relations").insert({
+          const relation = await db.from("catalog_machine_relations").insert({
             catalog_id: created.data.id,
             machine_model_id: outcome.modelId,
           });
+          if (relation.error && relation.error.code !== "23505") throw new Error(relation.error.message);
         }
       }
     }
 
-    await db.from("import_job_items").insert({
+    const item = await db.from("import_job_items").insert({
       import_job_id: jobId,
       external_reference: payload.externalReference,
       entity_type: payload.partNumber ? "part" : "catalog",
       status: "imported",
       local_entity_id: outcome.partId ?? outcome.catalogId ?? outcome.modelId,
     });
-    await db
+    if (item.error) throw new Error(item.error.message);
+
+    const completed = await db
       .from("import_jobs")
       .update({
         status: "completed",
@@ -330,6 +354,7 @@ export async function importPayload(
         completed_at: new Date().toISOString(),
       })
       .eq("id", jobId);
+    if (completed.error) throw new Error(completed.error.message);
 
     return outcome;
   } catch (error) {
