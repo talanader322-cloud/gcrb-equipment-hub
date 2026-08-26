@@ -7,9 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { useSession } from "@/hooks/useSession";
+import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/auth")({
@@ -27,13 +26,11 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
-  const { t, dir } = useI18n();
+  const { t, dir, locale } = useI18n();
   const navigate = useNavigate();
   const { user, ready } = useSession();
-  const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -44,41 +41,14 @@ function AuthPage() {
     event.preventDefault();
     setBusy(true);
     try {
-      if (mode === "signIn") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        navigate({ to: "/dashboard", replace: true });
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
-            data: { full_name: fullName },
-          },
-        });
-        if (error) throw error;
-        toast.success(t("auth.checkEmail"));
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      navigate({ to: "/dashboard", replace: true });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("auth.failed"));
     } finally {
       setBusy(false);
     }
-  }
-
-  async function google() {
-    setBusy(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      setBusy(false);
-      toast.error(t("auth.failed"));
-      return;
-    }
-    if (result.redirected) return;
-    navigate({ to: "/dashboard", replace: true });
   }
 
   return (
@@ -95,25 +65,15 @@ function AuthPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={submit} className="space-y-3">
-            {mode === "signUp" && (
-              <div className="space-y-1.5">
-                <Label htmlFor="fullName">{t("auth.fullName")}</Label>
-                <Input
-                  id="fullName"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                />
-              </div>
-            )}
             <div className="space-y-1.5">
               <Label htmlFor="email">{t("auth.email")}</Label>
               <Input
                 id="email"
                 type="email"
                 dir="ltr"
+                autoComplete="username"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
                 required
               />
             </div>
@@ -123,30 +83,24 @@ function AuthPage() {
                 id="password"
                 type="password"
                 dir="ltr"
+                autoComplete="current-password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(event) => setPassword(event.target.value)}
                 minLength={8}
                 required
               />
             </div>
             <Button type="submit" className="w-full" disabled={busy}>
               {busy && <Loader2 className="me-2 size-4 animate-spin" />}
-              {mode === "signIn" ? t("auth.signIn") : t("auth.signUp")}
+              {t("auth.signIn")}
             </Button>
           </form>
 
-          <Button variant="outline" className="w-full" onClick={google} disabled={busy}>
-            {t("auth.google")}
-          </Button>
-
-          <button
-            type="button"
-            className="w-full text-xs text-muted-foreground underline-offset-4 hover:underline"
-            onClick={() => setMode(mode === "signIn" ? "signUp" : "signIn")}
-          >
-            {mode === "signIn" ? t("auth.needAccount") : t("auth.haveAccount")}
-          </button>
-          <p className="text-center text-[11px] text-muted-foreground">{t("auth.roleNote")}</p>
+          <div className="rounded-md border border-border bg-muted/40 p-3 text-center text-xs text-muted-foreground">
+            {locale === "ar"
+              ? "الدخول مخصص لمستخدمي المؤسسة المعتمدين. يتم إنشاء الحسابات وإدارة الصلاحيات بواسطة مسؤول النظام."
+              : "Access is restricted to approved institutional users. Accounts and roles are managed by the system administrator."}
+          </div>
         </CardContent>
       </Card>
     </div>
