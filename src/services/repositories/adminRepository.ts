@@ -152,26 +152,9 @@ export const adminRepository = {
     if (error) throw new Error(error.message);
   },
 
-  /* ---------------- users & roles ---------------- */
-  async listUsers(): Promise<(Profile & { roles: AppRole[] })[]> {
-    const [profiles, roles] = await Promise.all([
-      supabase.from("profiles").select("*").order("created_at"),
-      supabase.from("user_roles").select("user_id, role"),
-    ]);
-    if (profiles.error) throw new Error(profiles.error.message);
-    const byUser = new Map<string, AppRole[]>();
-    for (const r of roles.data ?? []) {
-      byUser.set(r.user_id, [...(byUser.get(r.user_id) ?? []), r.role]);
-    }
-    return (profiles.data ?? []).map((p) => ({ ...p, roles: byUser.get(p.id) ?? [] }));
-  },
+  /* users & roles are managed through src/lib/auth.functions.ts (server-side, admin-only) */
 
-  async setUserRole(userId: string, role: AppRole) {
-    const del = await supabase.from("user_roles").delete().eq("user_id", userId);
-    if (del.error) throw new Error(del.error.message);
-    const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
-    if (error) throw new Error(error.message);
-  },
+
 
   /* ---------------- import jobs ---------------- */
   async listImportJobs(): Promise<ImportJob[]> {
