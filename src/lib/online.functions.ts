@@ -178,7 +178,7 @@ export const importOnlineResult = createServerFn({ method: "POST" })
         p_payload: payload as never,
         p_source_id: data.sourceId,
         p_duplicate_strategy: data.duplicateStrategy,
-        p_link_model_id: data.linkModelId ?? undefined,
+        ...(data.linkModelId ? { p_link_model_id: data.linkModelId } : {}),
       },
     );
     if (rpcError) throw new Error(rpcError.message);
