@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { ExternalSource, OnlineResult, SearchFilters } from "@/lib/types";
 import { getConnector } from "@/services/connectors/registry";
-import { detectDuplicates, importPayload } from "@/services/importService.server";
+import { detectDuplicates } from "@/services/importService.server";
 
 const filtersSchema = z.object({
   manufacturerId: z.string().optional(),
@@ -169,9 +169,36 @@ export const importOnlineResult = createServerFn({ method: "POST" })
     }
 
     const payload = connector.importMetadata(result);
-    const outcome = await importPayload(supabase, payload, data.sourceId, userId, {
-      duplicateStrategy: data.duplicateStrategy,
-      linkModelId: data.linkModelId ?? null,
-    });
-    return outcome;
+    // Atomic import: all domain writes happen in a single database
+    // transaction (public.import_external_payload). The import job row
+    // remains auditable even when the domain writes roll back.
+    const { data: outcome, error: rpcError } = await supabase.rpc(
+      "import_external_payload",
+      {
+        p_payload: payload as never,
+        p_source_id: data.sourceId,
+        p_duplicate_strategy: data.duplicateStrategy,
+        ...(data.linkModelId ? { p_link_model_id: data.linkModelId } : {}),
+      },
+    );
+    if (rpcError) throw new Error(rpcError.message);
+    const parsed = outcome as {
+      ok: boolean;
+      error?: string;
+      manufacturerId?: string | null;
+      modelId?: string | null;
+      catalogId?: string | null;
+      partId?: string | null;
+      created?: string[];
+      linked?: string[];
+    };
+    if (!parsed.ok) throw new Error(parsed.error ?? "Import failed.");
+    return {
+      manufacturerId: parsed.manufacturerId ?? null,
+      modelId: parsed.modelId ?? null,
+      catalogId: parsed.catalogId ?? null,
+      partId: parsed.partId ?? null,
+      created: parsed.created ?? [],
+      linked: parsed.linked ?? [],
+    };
   });
