@@ -72,7 +72,8 @@ function CatalogPage() {
 
   const toggleFavorite = useMutation({
     mutationFn: () => personalRepository.toggleFavorite(user!.id, "catalog", catalogId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["favorite", "catalog", catalogId] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["favorite", "catalog", catalogId] }),
   });
 
   const upload = useMutation({
@@ -181,7 +182,9 @@ function CatalogPage() {
               <CardTitle className="text-base">{t("viewer.contents")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1">
-              {sections.length === 0 && <p className="text-sm text-muted-foreground">{t("state.none")}</p>}
+              {sections.length === 0 && (
+                <p className="text-sm text-muted-foreground">{t("state.none")}</p>
+              )}
               {sections.map((section) => (
                 <p key={section.id} className="font-mono text-xs">
                   {section.section_number ? `${section.section_number} · ` : ""}
@@ -196,7 +199,9 @@ function CatalogPage() {
               <CardTitle className="text-base">{t("entity.assemblies")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1">
-              {assemblies.length === 0 && <p className="text-sm text-muted-foreground">{t("state.none")}</p>}
+              {assemblies.length === 0 && (
+                <p className="text-sm text-muted-foreground">{t("state.none")}</p>
+              )}
               {assemblies.map((assembly) => (
                 <Link
                   key={assembly.id}

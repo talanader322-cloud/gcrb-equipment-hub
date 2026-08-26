@@ -17,7 +17,8 @@ import { catalogRepository } from "@/services/repositories/catalogRepository";
 
 export const Route = createFileRoute("/_authenticated/equipment")({
   validateSearch: (search: Record<string, unknown>) => ({
-    manufacturerId: typeof search["manufacturerId"] === "string" ? (search["manufacturerId"] as string) : "",
+    manufacturerId:
+      typeof search["manufacturerId"] === "string" ? (search["manufacturerId"] as string) : "",
     equipmentTypeId:
       typeof search["equipmentTypeId"] === "string" ? (search["equipmentTypeId"] as string) : "",
     q: typeof search["q"] === "string" ? (search["q"] as string) : "",
@@ -107,7 +108,7 @@ function EquipmentPage() {
               <SelectItem value="any">{t("filter.any")}</SelectItem>
               {types.data?.map((item) => (
                 <SelectItem key={item.id} value={item.id}>
-                  {locale === "ar" ? item.name_ar ?? item.name : item.name}
+                  {locale === "ar" ? (item.name_ar ?? item.name) : item.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -126,7 +127,7 @@ function EquipmentPage() {
                 {row.equipment_type && (
                   <Badge variant="outline">
                     {locale === "ar"
-                      ? row.equipment_type.name_ar ?? row.equipment_type.name
+                      ? (row.equipment_type.name_ar ?? row.equipment_type.name)
                       : row.equipment_type.name}
                   </Badge>
                 )}

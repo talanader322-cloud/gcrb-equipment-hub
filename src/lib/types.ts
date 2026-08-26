@@ -24,12 +24,7 @@ export type DownloadRecord = Tables["download_records"]["Row"];
 export type Profile = Tables["profiles"]["Row"];
 export type AppRole = Database["public"]["Enums"]["app_role"];
 
-export const APP_ROLES: AppRole[] = [
-  "system_admin",
-  "catalog_manager",
-  "technical_user",
-  "viewer",
-];
+export const APP_ROLES: AppRole[] = ["system_admin", "catalog_manager", "technical_user", "viewer"];
 
 export const CATALOG_TYPES = [
   "parts_catalog",

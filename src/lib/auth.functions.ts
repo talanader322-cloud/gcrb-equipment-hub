@@ -12,9 +12,7 @@ function clientKey(): string | null {
   const header = request?.headers;
   if (!header) return null;
   return (
-    header.get("cf-connecting-ip") ??
-    header.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    null
+    header.get("cf-connecting-ip") ?? header.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null
   );
 }
 
@@ -32,7 +30,6 @@ async function assertAdmin(context: { supabase: unknown; userId: string }) {
   if (!data) throw new Error("Forbidden: system administrators only");
 }
 
-/** Exchanges a username + password for a Supabase session. Never returns the internal email. */
 export const signInWithUsername = createServerFn({ method: "POST" })
   .inputValidator((input: SignInInput) => input)
   .handler(async ({ data }) => {
@@ -105,9 +102,3 @@ export const setUsername = createServerFn({ method: "POST" })
     await updateManagedUsername(data.userId, data.username);
     return { ok: true };
   });
-
-/** Idempotent: creates the initial system administrator once, from a stored secret. */
-export const ensureBootstrapAdmin = createServerFn({ method: "POST" }).handler(async () => {
-  const { ensureBootstrapAdminServer } = await import("@/services/authService.server");
-  return ensureBootstrapAdminServer();
-});

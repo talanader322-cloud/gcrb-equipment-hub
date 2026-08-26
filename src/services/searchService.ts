@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { classifyQuery, normalizeCode, normalizeText } from "@/lib/normalize";
+import { normalizeCode, normalizeText } from "@/lib/normalize";
 import type {
   AssemblyResult,
   CatalogResult,
@@ -10,13 +10,6 @@ import type {
   SearchScope,
 } from "@/lib/types";
 
-/**
- * Search service — universal local search across the corporation database.
- *
- * Every technical identifier is matched both exactly (as entered) and through
- * its normalized form, so `23A-15-00053` and `23A1500053` are equivalent.
- */
-
 const MODEL_SELECT =
   "*, manufacturer:manufacturers(id,name,slug), equipment_type:equipment_types(id,name,name_ar,slug)";
 const CATALOG_SELECT =
@@ -24,8 +17,32 @@ const CATALOG_SELECT =
 const PART_SELECT = "*, manufacturer:manufacturers(id,name,slug)";
 const LIMIT = 50;
 
+type RpcClient = {
+  rpc(
+    name: string,
+    args?: Record<string, unknown>,
+  ): PromiseLike<{
+    data: unknown;
+    error: { message: string } | null;
+  }>;
+};
+
+type SerialModelRow = { machine_model_id: string; match_rank: number };
+
 function sanitize(value: string): string {
   return value.replace(/[%,()*]/g, " ").trim();
+}
+
+async function searchSerialModelIds(query: string, filters: SearchFilters): Promise<string[]> {
+  const rpcDb = supabase as unknown as RpcClient;
+  const { data, error } = await rpcDb.rpc("search_serial_model_ids", {
+    p_query: query,
+    p_manufacturer_id: filters.manufacturerId ?? null,
+    p_equipment_type_id: filters.equipmentTypeId ?? null,
+  });
+  if (error) throw new Error(error.message);
+  if (!Array.isArray(data)) return [];
+  return (data as SerialModelRow[]).map((row) => row.machine_model_id);
 }
 
 async function searchModels(
@@ -53,32 +70,19 @@ async function searchModels(
   if (direct.error) throw new Error(direct.error.message);
   for (const row of (direct.data ?? []) as ModelResult[]) found.set(row.id, row);
 
-  // aliases
   const aliasRes = await supabase
     .from("machine_aliases")
     .select("machine_model_id")
     .ilike("normalized_alias", `%${code}%`)
     .limit(LIMIT);
-  // serial prefix / serial number ranges
-  const serialRes = await supabase
-    .from("serial_ranges")
-    .select("machine_model_id, serial_prefix, serial_from, serial_to")
-    .limit(500);
+  if (aliasRes.error) throw new Error(aliasRes.error.message);
 
-  const extraIds = new Set<string>((aliasRes.data ?? []).map((a) => a.machine_model_id));
-  const serialQuery = filters.serialNumber ? normalizeCode(filters.serialNumber) : code;
-  const numeric = Number(serialQuery.replace(/\D/g, ""));
-  for (const r of serialRes.data ?? []) {
-    const prefixMatch = r.serial_prefix
-      ? normalizeCode(r.serial_prefix) === serialQuery ||
-        serialQuery.startsWith(normalizeCode(r.serial_prefix))
-      : false;
-    const from = Number((r.serial_from ?? "").replace(/\D/g, ""));
-    const to = r.serial_to ? Number(r.serial_to.replace(/\D/g, "")) : Number.POSITIVE_INFINITY;
-    const inRange =
-      Number.isFinite(numeric) && numeric > 0 && Number.isFinite(from) && numeric >= from && numeric <= to;
-    if (prefixMatch || inRange) extraIds.add(r.machine_model_id);
-  }
+  const serialQuery = filters.serialNumber?.trim() || raw;
+  const serialIds = await searchSerialModelIds(serialQuery, filters);
+  const extraIds = new Set<string>([
+    ...(aliasRes.data ?? []).map((a) => a.machine_model_id),
+    ...serialIds,
+  ]);
 
   const missing = [...extraIds].filter((id) => !found.has(id));
   if (missing.length > 0) {
@@ -86,10 +90,20 @@ async function searchModels(
     if (filters.manufacturerId) q2 = q2.eq("manufacturer_id", filters.manufacturerId);
     if (filters.equipmentTypeId) q2 = q2.eq("equipment_type_id", filters.equipmentTypeId);
     const extra = await q2;
+    if (extra.error) throw new Error(extra.error.message);
     for (const row of (extra.data ?? []) as ModelResult[]) found.set(row.id, row);
   }
 
-  return [...found.values()];
+  const serialOrder = new Map(serialIds.map((id, index) => [id, index]));
+  return [...found.values()].sort((a, b) => {
+    const aExact = normalizeCode(a.model_name) === code ? 1 : 0;
+    const bExact = normalizeCode(b.model_name) === code ? 1 : 0;
+    if (aExact !== bExact) return bExact - aExact;
+    return (
+      (serialOrder.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+      (serialOrder.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+    );
+  });
 }
 
 async function searchParts(
@@ -122,24 +136,35 @@ async function searchParts(
     .select("part_id")
     .ilike("normalized_number", `%${code}%`)
     .limit(LIMIT);
+  if (aliasRes.error) throw new Error(aliasRes.error.message);
+
   const missing = [...new Set((aliasRes.data ?? []).map((a) => a.part_id))].filter(
     (id) => !found.has(id),
   );
   if (missing.length > 0) {
-    const extra = await supabase.from("parts").select(PART_SELECT).in("id", missing).limit(LIMIT);
+    let extraQuery = supabase.from("parts").select(PART_SELECT).in("id", missing).limit(LIMIT);
+    if (filters.manufacturerId)
+      extraQuery = extraQuery.eq("manufacturer_id", filters.manufacturerId);
+    const extra = await extraQuery;
+    if (extra.error) throw new Error(extra.error.message);
     for (const row of (extra.data ?? []) as PartResult[]) found.set(row.id, row);
   }
 
-  if (filters.machineModelId) {
-    const compat = await supabase
-      .from("part_machine_compatibility")
-      .select("part_id")
-      .eq("machine_model_id", filters.machineModelId);
-    const allowed = new Set((compat.data ?? []).map((c) => c.part_id));
-    return [...found.values()].filter((p) => allowed.has(p.id));
-  }
+  const ranked = [...found.values()].sort(
+    (a, b) =>
+      Number(normalizeCode(b.primary_part_number) === code) -
+      Number(normalizeCode(a.primary_part_number) === code),
+  );
 
-  return [...found.values()];
+  if (!filters.machineModelId) return ranked;
+
+  const compat = await supabase
+    .from("part_machine_compatibility")
+    .select("part_id")
+    .eq("machine_model_id", filters.machineModelId);
+  if (compat.error) throw new Error(compat.error.message);
+  const allowed = new Set((compat.data ?? []).map((c) => c.part_id));
+  return ranked.filter((p) => allowed.has(p.id));
 }
 
 async function searchCatalogs(
@@ -165,7 +190,11 @@ async function searchCatalogs(
   if (filters.catalogType) q = q.eq("catalog_type", filters.catalogType);
   const { data, error } = await q;
   if (error) throw new Error(error.message);
-  return (data ?? []) as CatalogResult[];
+  return ((data ?? []) as CatalogResult[]).sort(
+    (a, b) =>
+      Number(normalizeCode(b.catalog_number ?? "") === code) -
+      Number(normalizeCode(a.catalog_number ?? "") === code),
+  );
 }
 
 async function searchAssemblies(raw: string): Promise<AssemblyResult[]> {
@@ -181,7 +210,6 @@ async function searchAssemblies(raw: string): Promise<AssemblyResult[]> {
 }
 
 export const searchService = {
-  /** Local-first universal search. Never touches external sources. */
   async searchLocal(
     query: string,
     scope: SearchScope = "all",
@@ -208,18 +236,11 @@ export const searchService = {
       wants("assemblies") ? searchAssemblies(raw) : Promise.resolve([]),
     ]);
 
-    const kind = classifyQuery(raw);
-    const rank = <T extends { id: string }>(rows: T[], exact: (row: T) => boolean) =>
-      [...rows].sort((a, b) => Number(exact(b)) - Number(exact(a)));
-
-    const rankedParts = rank(parts, (p) => normalizeCode(p.primary_part_number) === code);
-    const rankedModels = rank(models, (m) => normalizeCode(m.model_name) === code);
-
     return {
       query: raw,
       normalizedQuery: code,
-      models: kind === "model" ? rankedModels : rankedModels,
-      parts: rankedParts,
+      models,
+      parts,
       catalogs,
       assemblies,
       total: models.length + parts.length + catalogs.length + assemblies.length,

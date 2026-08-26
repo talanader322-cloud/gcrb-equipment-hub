@@ -44,7 +44,11 @@ export const adminRepository = {
     series: string | null;
     description: string | null;
   }) {
-    const { data, error } = await supabase.from("machine_models").insert(input).select("id").single();
+    const { data, error } = await supabase
+      .from("machine_models")
+      .insert(input)
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
     return data.id;
   },
@@ -125,7 +129,11 @@ export const adminRepository = {
     mime_type: string;
     file_size: number;
   }) {
-    const { data, error } = await supabase.from("catalog_files").insert(input).select("id").single();
+    const { data, error } = await supabase
+      .from("catalog_files")
+      .insert(input)
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
     await supabase.from("catalogs").update({ file_id: data.id }).eq("id", input.catalog_id);
     return data.id;
@@ -153,8 +161,6 @@ export const adminRepository = {
   },
 
   /* users & roles are managed through src/lib/auth.functions.ts (server-side, admin-only) */
-
-
 
   /* ---------------- import jobs ---------------- */
   async listImportJobs(): Promise<ImportJob[]> {

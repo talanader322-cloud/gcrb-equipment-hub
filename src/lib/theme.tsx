@@ -14,7 +14,7 @@ const STORAGE_KEY = "gcrb.theme";
 
 type ThemeValue = {
   theme: Theme;
-  setTheme: (theme: Theme) => void
+  setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
 };
 

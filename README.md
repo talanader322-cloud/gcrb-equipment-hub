@@ -1493,8 +1493,7 @@ ASSEMBLY / EXPLODED DIAGRAM PAGE
 
 Display:
 
-Exploded diagram
-+
+Exploded diagram +
 Parts list
 
 Parts table:
@@ -1689,14 +1688,10 @@ FUTURE WINDOWS APPLICATION
 
 Prepare architecture for:
 
-React UI
-+
-Tauri
-+
-SQLite
-+
-Local Catalog Files
-+
+React UI +
+Tauri +
+SQLite +
+Local Catalog Files +
 Central Supabase Synchronization
 
 Create abstraction interfaces:

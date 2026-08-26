@@ -1,12 +1,7 @@
 import { normalizeCode } from "@/lib/normalize";
 import type { OnlineResult, SearchFilters } from "@/lib/types";
 
-import type {
-  CatalogMetadata,
-  ConnectorContext,
-  ImportPayload,
-  SourceConnector,
-} from "./types";
+import type { CatalogMetadata, ConnectorContext, ImportPayload, SourceConnector } from "./types";
 
 /**
  * DEMO connector — clearly marked synthetic source.
@@ -161,7 +156,7 @@ export class DemoConnector implements SourceConnector {
 
   importMetadata(result: OnlineResult): ImportPayload {
     const serial = result.serialRange ?? null;
-    const serialFrom = serial ? serial.split("-")[0] ?? null : null;
+    const serialFrom = serial ? (serial.split("-")[0] ?? null) : null;
     return {
       manufacturerName: result.manufacturer,
       equipmentTypeName: result.equipmentType,

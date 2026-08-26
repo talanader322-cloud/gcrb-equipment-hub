@@ -198,7 +198,9 @@ export async function createManagedUser(input: {
   }
 
   await supabaseAdmin.from("user_roles").delete().eq("user_id", userId);
-  const roleRes = await supabaseAdmin.from("user_roles").insert({ user_id: userId, role: input.role });
+  const roleRes = await supabaseAdmin
+    .from("user_roles")
+    .insert({ user_id: userId, role: input.role });
   if (roleRes.error) throw new Error(roleRes.error.message);
 
   return { id: userId, username };
@@ -229,10 +231,7 @@ export async function updateManagedUsername(userId: string, rawUsername: string)
   const username = normalizeUsername(rawUsername);
   if (!USERNAME_PATTERN.test(username)) throw new Error("Invalid username format");
   await assertUsernameFree(username, userId);
-  const { error } = await supabaseAdmin
-    .from("profiles")
-    .update({ username })
-    .eq("id", userId);
+  const { error } = await supabaseAdmin.from("profiles").update({ username }).eq("id", userId);
   if (error) throw new Error(error.message);
   await supabaseAdmin.auth.admin.updateUserById(userId, { email: authEmailFor(username) });
 }

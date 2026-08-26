@@ -13,7 +13,10 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "لوحة المعلومات | GCRB Equipment Catalog" },
-      { name: "description", content: "Overview of catalog coverage, sources and recent activity." },
+      {
+        name: "description",
+        content: "Overview of catalog coverage, sources and recent activity.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),

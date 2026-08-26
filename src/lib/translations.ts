@@ -90,7 +90,6 @@ export const en = {
   "users.updated": "Updated",
   "users.usernameHint": "Lowercase letters, numbers, dot, dash or underscore (3-32 chars).",
 
-
   // dashboard
   "dash.title": "Dashboard",
   "dash.subtitle": "Universal technical search across the corporation catalog database.",
@@ -416,7 +415,6 @@ export const ar: Record<TranslationKey, string> = {
   "users.updated": "تم التحديث",
   "users.usernameHint": "أحرف إنجليزية صغيرة وأرقام والرموز . - _ (٣-٣٢ حرفاً).",
 
-
   "dash.title": "الرئيسية",
   "dash.subtitle": "بحث تقني شامل في قاعدة بيانات كتالوجات المؤسسة.",
   "dash.manufacturers": "الشركات المصنعة",
@@ -646,4 +644,7 @@ export const ar: Record<TranslationKey, string> = {
   "state.next": "التالي",
 };
 
-export const dictionary = { en, ar } as { en: Record<TranslationKey, string>; ar: Record<TranslationKey, string> };
+export const dictionary = { en, ar } as {
+  en: Record<TranslationKey, string>;
+  ar: Record<TranslationKey, string>;
+};

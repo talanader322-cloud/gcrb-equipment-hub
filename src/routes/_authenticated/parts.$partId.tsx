@@ -17,7 +17,10 @@ export const Route = createFileRoute("/_authenticated/parts/$partId")({
   head: () => ({
     meta: [
       { title: "بطاقة قطعة الغيار | GCRB Equipment Catalog" },
-      { name: "description", content: "Part number details, alternates and machine compatibility." },
+      {
+        name: "description",
+        content: "Part number details, alternates and machine compatibility.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -87,7 +90,9 @@ function PartPage() {
             <CardTitle className="text-base">{t("entity.alternateNumbers")}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
-            {aliases.length === 0 && <p className="text-sm text-muted-foreground">{t("state.none")}</p>}
+            {aliases.length === 0 && (
+              <p className="text-sm text-muted-foreground">{t("state.none")}</p>
+            )}
             {aliases.map((alias) => (
               <Badge key={alias.id} variant="outline" className="font-mono">
                 {alias.alternate_number}
@@ -105,12 +110,10 @@ function PartPage() {
               <p className="text-sm text-muted-foreground">{t("state.none")}</p>
             )}
             {compatibility.map((item) => {
-              const model = (
-                item as { machine_model: { id: string; model_name: string } | null }
-              ).machine_model;
-              const range = (
-                item as { serial_range: { display_value: string | null } | null }
-              ).serial_range;
+              const model = (item as { machine_model: { id: string; model_name: string } | null })
+                .machine_model;
+              const range = (item as { serial_range: { display_value: string | null } | null })
+                .serial_range;
               if (!model) return null;
               return (
                 <div key={item.id} className="flex items-center justify-between gap-2">
@@ -168,7 +171,9 @@ function PartPage() {
                     {assembly.assembly_number ? `${assembly.assembly_number} · ` : ""}
                     {assembly.title}
                   </Link>
-                  <p className="truncate text-xs text-muted-foreground">{assembly.catalog?.title}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {assembly.catalog?.title}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2 font-mono text-xs">
                   <span>

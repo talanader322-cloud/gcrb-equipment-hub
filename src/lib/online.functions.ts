@@ -23,9 +23,7 @@ const filtersSchema = z.object({
 export const searchOnline = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z
-      .object({ query: z.string().min(1), filters: filtersSchema.default({}) })
-      .parse(input),
+    z.object({ query: z.string().min(1), filters: filtersSchema.default({}) }).parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
@@ -172,15 +170,12 @@ export const importOnlineResult = createServerFn({ method: "POST" })
     // Atomic import: all domain writes happen in a single database
     // transaction (public.import_external_payload). The import job row
     // remains auditable even when the domain writes roll back.
-    const { data: outcome, error: rpcError } = await supabase.rpc(
-      "import_external_payload",
-      {
-        p_payload: payload as never,
-        p_source_id: data.sourceId,
-        p_duplicate_strategy: data.duplicateStrategy,
-        ...(data.linkModelId ? { p_link_model_id: data.linkModelId } : {}),
-      },
-    );
+    const { data: outcome, error: rpcError } = await supabase.rpc("import_external_payload", {
+      p_payload: payload as never,
+      p_source_id: data.sourceId,
+      p_duplicate_strategy: data.duplicateStrategy,
+      ...(data.linkModelId ? { p_link_model_id: data.linkModelId } : {}),
+    });
     if (rpcError) throw new Error(rpcError.message);
     const parsed = outcome as {
       ok: boolean;

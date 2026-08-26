@@ -55,12 +55,15 @@ export const personalRepository = {
   },
 
   async trackRecent(userId: string, entityType: EntityType, entityId: string): Promise<void> {
-    await supabase
-      .from("recent_items")
-      .upsert(
-        { user_id: userId, entity_type: entityType, entity_id: entityId, opened_at: new Date().toISOString() },
-        { onConflict: "user_id,entity_type,entity_id" },
-      );
+    await supabase.from("recent_items").upsert(
+      {
+        user_id: userId,
+        entity_type: entityType,
+        entity_id: entityId,
+        opened_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,entity_type,entity_id" },
+    );
   },
 
   async listSavedSearches(limit = 20): Promise<SavedSearch[]> {
@@ -85,7 +88,9 @@ export const personalRepository = {
     if (error) throw new Error(error.message);
   },
 
-  async listDownloads(): Promise<(DownloadRecord & { catalog: { id: string; title: string } | null })[]> {
+  async listDownloads(): Promise<
+    (DownloadRecord & { catalog: { id: string; title: string } | null })[]
+  > {
     const { data, error } = await supabase
       .from("download_records")
       .select("*, catalog:catalogs(id,title)")

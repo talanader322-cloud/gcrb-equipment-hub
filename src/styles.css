@@ -11,8 +11,7 @@
  */
 
 @theme inline {
-  --font-sans:
-    "IBM Plex Sans", "Cairo", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", "Cairo", ui-sans-serif, system-ui, sans-serif;
   --font-arabic: "Cairo", "IBM Plex Sans", ui-sans-serif, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
