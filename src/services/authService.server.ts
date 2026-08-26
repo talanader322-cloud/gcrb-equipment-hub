@@ -6,7 +6,6 @@ import type { AppRole } from "@/lib/types";
 
 /** Internal auth-email domain. Never exposed to the browser. */
 const AUTH_EMAIL_DOMAIN = "users.gcrb.local";
-
 const MAX_FAILED_ATTEMPTS = 5;
 const WINDOW_MINUTES = 15;
 
@@ -24,7 +23,6 @@ function isNewSupabaseApiKey(value: string) {
   return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");
 }
 
-/** Publishable-key client used only to exchange credentials for a session. */
 function createAuthClient() {
   const url = process.env["SUPABASE_URL"];
   const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
@@ -45,9 +43,7 @@ function createAuthClient() {
 }
 
 async function recordAttempt(username: string, clientKey: string | null, success: boolean) {
-  await supabaseAdmin
-    .from("auth_login_attempts")
-    .insert({ username, client_key: clientKey, success });
+  await supabaseAdmin.from("auth_login_attempts").insert({ username, client_key: clientKey, success });
 }
 
 async function isRateLimited(username: string, clientKey: string | null) {
@@ -73,7 +69,6 @@ export type SignInOutcome =
   | { ok: true; access_token: string; refresh_token: string }
   | { ok: false; reason: "invalid" | "disabled" | "rate_limited" };
 
-/** Username + password sign-in. Returns session tokens, never the internal email. */
 export async function signInWithUsernameServer(
   rawUsername: string,
   password: string,
@@ -81,7 +76,6 @@ export async function signInWithUsernameServer(
 ): Promise<SignInOutcome> {
   const username = normalizeUsername(rawUsername);
   if (!username || !password) return { ok: false, reason: "invalid" };
-
   if (await isRateLimited(username, clientKey)) return { ok: false, reason: "rate_limited" };
 
   const { data: profile } = await supabaseAdmin
@@ -142,6 +136,8 @@ export async function listManagedUsers(): Promise<ManagedUser[]> {
     supabaseAdmin.from("user_roles").select("user_id, role"),
   ]);
   if (profiles.error) throw new Error(profiles.error.message);
+  if (roles.error) throw new Error(roles.error.message);
+
   const byUser = new Map<string, AppRole[]>();
   for (const r of roles.data ?? []) {
     byUser.set(r.user_id, [...(byUser.get(r.user_id) ?? []), r.role]);
@@ -150,11 +146,12 @@ export async function listManagedUsers(): Promise<ManagedUser[]> {
 }
 
 export async function assertUsernameFree(username: string, exceptUserId?: string) {
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("profiles")
     .select("id")
     .eq("username", username)
     .maybeSingle();
+  if (error) throw new Error(error.message);
   if (data && data.id !== exceptUserId) throw new Error("Username already exists");
 }
 
@@ -182,24 +179,28 @@ export async function createManagedUser(input: {
   }
   const userId = created.data.user.id;
 
-  const profile = await supabaseAdmin
-    .from("profiles")
-    .update({
-      username,
-      full_name: input.fullName,
-      job_title: input.jobTitle ?? null,
-      department: input.department ?? null,
-      active: true,
-    })
-    .eq("id", userId);
-  if (profile.error) {
-    await supabaseAdmin.auth.admin.deleteUser(userId);
-    throw new Error(profile.error.message);
-  }
+  try {
+    const profile = await supabaseAdmin
+      .from("profiles")
+      .update({
+        username,
+        full_name: input.fullName,
+        job_title: input.jobTitle ?? null,
+        department: input.department ?? null,
+        active: true,
+      })
+      .eq("id", userId);
+    if (profile.error) throw new Error(profile.error.message);
 
-  await supabaseAdmin.from("user_roles").delete().eq("user_id", userId);
-  const roleRes = await supabaseAdmin.from("user_roles").insert({ user_id: userId, role: input.role });
-  if (roleRes.error) throw new Error(roleRes.error.message);
+    const clearRoles = await supabaseAdmin.from("user_roles").delete().eq("user_id", userId);
+    if (clearRoles.error) throw new Error(clearRoles.error.message);
+
+    const roleRes = await supabaseAdmin.from("user_roles").insert({ user_id: userId, role: input.role });
+    if (roleRes.error) throw new Error(roleRes.error.message);
+  } catch (error) {
+    await supabaseAdmin.auth.admin.deleteUser(userId);
+    throw error;
+  }
 
   return { id: userId, username };
 }
@@ -213,47 +214,52 @@ export async function setManagedUserPassword(userId: string, password: string) {
 export async function setManagedUserActive(userId: string, active: boolean) {
   const { error } = await supabaseAdmin.from("profiles").update({ active }).eq("id", userId);
   if (error) throw new Error(error.message);
-  await supabaseAdmin.auth.admin.updateUserById(userId, {
+  const authUpdate = await supabaseAdmin.auth.admin.updateUserById(userId, {
     ban_duration: active ? "none" : "876000h",
   });
+  if (authUpdate.error) {
+    await supabaseAdmin.from("profiles").update({ active: !active }).eq("id", userId);
+    throw new Error(authUpdate.error.message);
+  }
 }
 
 export async function setManagedUserRole(userId: string, role: AppRole) {
+  const existing = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
+  if (existing.error) throw new Error(existing.error.message);
+
   const del = await supabaseAdmin.from("user_roles").delete().eq("user_id", userId);
   if (del.error) throw new Error(del.error.message);
   const { error } = await supabaseAdmin.from("user_roles").insert({ user_id: userId, role });
-  if (error) throw new Error(error.message);
+  if (error) {
+    if ((existing.data ?? []).length > 0) {
+      await supabaseAdmin.from("user_roles").insert(
+        existing.data!.map((item) => ({ user_id: userId, role: item.role })),
+      );
+    }
+    throw new Error(error.message);
+  }
 }
 
 export async function updateManagedUsername(userId: string, rawUsername: string) {
   const username = normalizeUsername(rawUsername);
   if (!USERNAME_PATTERN.test(username)) throw new Error("Invalid username format");
   await assertUsernameFree(username, userId);
-  const { error } = await supabaseAdmin
-    .from("profiles")
-    .update({ username })
-    .eq("id", userId);
-  if (error) throw new Error(error.message);
-  await supabaseAdmin.auth.admin.updateUserById(userId, { email: authEmailFor(username) });
-}
 
-/** Idempotent bootstrap of the initial system administrator (password from a secret). */
-export async function ensureBootstrapAdminServer() {
-  const password = process.env["ADMIN2_INITIAL_PASSWORD"];
-  if (!password) return { created: false, reason: "missing_secret" as const };
+  const previous = await supabaseAdmin.from("profiles").select("username").eq("id", userId).single();
+  if (previous.error) throw new Error(previous.error.message);
 
-  const existing = await supabaseAdmin
-    .from("profiles")
-    .select("id")
-    .eq("username", "admin2")
-    .maybeSingle();
-  if (existing.data) return { created: false, reason: "already_exists" as const };
-
-  await createManagedUser({
-    username: "admin2",
-    password,
-    fullName: "System Administrator",
-    role: "system_admin",
+  const authUpdate = await supabaseAdmin.auth.admin.updateUserById(userId, {
+    email: authEmailFor(username),
   });
-  return { created: true, reason: "created" as const };
+  if (authUpdate.error) throw new Error(authUpdate.error.message);
+
+  const { error } = await supabaseAdmin.from("profiles").update({ username }).eq("id", userId);
+  if (error) {
+    if (previous.data.username) {
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
+        email: authEmailFor(previous.data.username),
+      });
+    }
+    throw new Error(error.message);
+  }
 }
