@@ -12,11 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedCatalogsRouteImport } from './routes/_authenticated/catalogs'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedEquipmentRouteImport } from './routes/_authenticated/equipment'
 import { Route as AuthenticatedManufacturersRouteImport } from './routes/_authenticated/manufacturers'
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
+import { Route as AuthenticatedCatalogsIndexRouteImport } from './routes/_authenticated/catalogs.index'
 import { Route as AuthenticatedModelsModelIdRouteImport } from './routes/_authenticated/models.$modelId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -32,11 +32,6 @@ const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedCatalogsRoute = AuthenticatedCatalogsRouteImport.update({
-  id: '/catalogs',
-  path: '/catalogs',
-  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
@@ -59,6 +54,12 @@ const AuthenticatedSearchRoute = AuthenticatedSearchRouteImport.update({
   path: '/search',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCatalogsIndexRoute =
+  AuthenticatedCatalogsIndexRouteImport.update({
+    id: '/catalogs/',
+    path: '/catalogs/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedModelsModelIdRoute =
   AuthenticatedModelsModelIdRouteImport.update({
     id: '/models/$modelId',
@@ -69,67 +70,67 @@ const AuthenticatedModelsModelIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/catalogs': typeof AuthenticatedCatalogsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/equipment': typeof AuthenticatedEquipmentRoute
   '/manufacturers': typeof AuthenticatedManufacturersRoute
   '/search': typeof AuthenticatedSearchRoute
   '/models/$modelId': typeof AuthenticatedModelsModelIdRoute
+  '/catalogs/': typeof AuthenticatedCatalogsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/catalogs': typeof AuthenticatedCatalogsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/equipment': typeof AuthenticatedEquipmentRoute
   '/manufacturers': typeof AuthenticatedManufacturersRoute
   '/search': typeof AuthenticatedSearchRoute
   '/models/$modelId': typeof AuthenticatedModelsModelIdRoute
+  '/catalogs': typeof AuthenticatedCatalogsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/_authenticated/catalogs': typeof AuthenticatedCatalogsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/equipment': typeof AuthenticatedEquipmentRoute
   '/_authenticated/manufacturers': typeof AuthenticatedManufacturersRoute
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/models/$modelId': typeof AuthenticatedModelsModelIdRoute
+  '/_authenticated/catalogs/': typeof AuthenticatedCatalogsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/auth'
-    | '/catalogs'
     | '/dashboard'
     | '/equipment'
     | '/manufacturers'
     | '/search'
     | '/models/$modelId'
+    | '/catalogs/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
-    | '/catalogs'
     | '/dashboard'
     | '/equipment'
     | '/manufacturers'
     | '/search'
     | '/models/$modelId'
+    | '/catalogs'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
-    | '/_authenticated/catalogs'
     | '/_authenticated/dashboard'
     | '/_authenticated/equipment'
     | '/_authenticated/manufacturers'
     | '/_authenticated/search'
     | '/_authenticated/models/$modelId'
+    | '/_authenticated/catalogs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -161,13 +162,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/catalogs': {
-      id: '/_authenticated/catalogs'
-      path: '/catalogs'
-      fullPath: '/catalogs'
-      preLoaderRoute: typeof AuthenticatedCatalogsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -196,6 +190,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSearchRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/catalogs/': {
+      id: '/_authenticated/catalogs/'
+      path: '/catalogs'
+      fullPath: '/catalogs/'
+      preLoaderRoute: typeof AuthenticatedCatalogsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/models/$modelId': {
       id: '/_authenticated/models/$modelId'
       path: '/models/$modelId'
@@ -207,21 +208,21 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedCatalogsRoute: typeof AuthenticatedCatalogsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEquipmentRoute: typeof AuthenticatedEquipmentRoute
   AuthenticatedManufacturersRoute: typeof AuthenticatedManufacturersRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedModelsModelIdRoute: typeof AuthenticatedModelsModelIdRoute
+  AuthenticatedCatalogsIndexRoute: typeof AuthenticatedCatalogsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedCatalogsRoute: AuthenticatedCatalogsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEquipmentRoute: AuthenticatedEquipmentRoute,
   AuthenticatedManufacturersRoute: AuthenticatedManufacturersRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedModelsModelIdRoute: AuthenticatedModelsModelIdRoute,
+  AuthenticatedCatalogsIndexRoute: AuthenticatedCatalogsIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
