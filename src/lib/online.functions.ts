@@ -16,19 +16,19 @@ const filtersSchema = z.object({
 });
 
 /**
- * Online discovery. Runs entirely server-side so that source credentials never
- * reach the browser. Results are advisory only until a catalog manager imports
- * them.
+ * Online discovery. Runs entirely server-side so source credentials never
+ * reach the browser. Technical users may search; only catalog managers may
+ * persist temporary cache rows or connector health metadata.
  */
 export const searchOnline = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z
-      .object({ query: z.string().min(1), filters: filtersSchema.default({}) })
-      .parse(input),
+    z.object({ query: z.string().min(1), filters: filtersSchema.default({}) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    const { data: canManage } = await supabase.rpc("can_manage_catalog", { _user_id: userId });
+
     const { data: sources, error } = await supabase
       .from("external_sources")
       .select("*")
@@ -45,23 +45,33 @@ export const searchOnline = createServerFn({ method: "POST" })
         errors.push({ source: source.name, message: "No connector registered." });
         continue;
       }
+
       try {
         const found = await connector.search(data.query, data.filters as SearchFilters);
         results.push(...found);
-        await supabase
-          .from("external_sources")
-          .update({ last_success_at: new Date().toISOString(), last_error: null })
-          .eq("id", source.id);
+
+        if (canManage) {
+          const statusUpdate = await supabase
+            .from("external_sources")
+            .update({ last_success_at: new Date().toISOString(), last_error: null })
+            .eq("id", source.id);
+          if (statusUpdate.error) {
+            errors.push({ source: source.name, message: statusUpdate.error.message });
+          }
+        }
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : "Unknown connector error";
         errors.push({ source: source.name, message });
-        await supabase.from("external_sources").update({ last_error: message }).eq("id", source.id);
+
+        if (canManage) {
+          await supabase.from("external_sources").update({ last_error: message }).eq("id", source.id);
+        }
       }
     }
 
-    if (results.length > 0) {
+    if (canManage && results.length > 0) {
       const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      await supabase.from("external_search_results").insert(
+      const cacheWrite = await supabase.from("external_search_results").insert(
         results.map((result) => ({
           source_id: result.sourceId,
           query: data.query,
@@ -78,6 +88,9 @@ export const searchOnline = createServerFn({ method: "POST" })
           expires_at: expires,
         })),
       );
+      if (cacheWrite.error) {
+        errors.push({ source: "cache", message: cacheWrite.error.message });
+      }
     }
 
     return { results, errors };
@@ -87,7 +100,10 @@ export const testSource = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ sourceId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    const { data: canManage } = await supabase.rpc("can_manage_catalog", { _user_id: userId });
+    if (!canManage) throw new Error("Only catalog managers may test external sources.");
+
     const { data: source, error } = await supabase
       .from("external_sources")
       .select("*")
@@ -100,7 +116,7 @@ export const testSource = createServerFn({ method: "POST" })
     if (!connector) return { ok: false, message: "No connector registered for this source." };
 
     const outcome = await connector.testConnection();
-    await supabase
+    const statusUpdate = await supabase
       .from("external_sources")
       .update(
         outcome.ok
@@ -108,6 +124,7 @@ export const testSource = createServerFn({ method: "POST" })
           : { last_error: outcome.message },
       )
       .eq("id", data.sourceId);
+    if (statusUpdate.error) throw new Error(statusUpdate.error.message);
     return outcome;
   });
 
@@ -117,13 +134,17 @@ export const previewOnlineImport = createServerFn({ method: "POST" })
     z.object({ sourceId: z.string().uuid(), externalId: z.string().min(1) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    const { data: canManage } = await supabase.rpc("can_manage_catalog", { _user_id: userId });
+    if (!canManage) throw new Error("Only catalog managers may preview external imports.");
+
     const { data: source } = await supabase
       .from("external_sources")
       .select("*")
       .eq("id", data.sourceId)
       .maybeSingle();
     if (!source) throw new Error("Source not found.");
+
     const connector = getConnector(source as ExternalSource);
     if (!connector) throw new Error("No connector registered for this source.");
 
@@ -150,7 +171,6 @@ export const importOnlineResult = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-
     const { data: canManage } = await supabase.rpc("can_manage_catalog", { _user_id: userId });
     if (!canManage) throw new Error("Only catalog managers may import external records.");
 
@@ -160,6 +180,7 @@ export const importOnlineResult = createServerFn({ method: "POST" })
       .eq("id", data.sourceId)
       .maybeSingle();
     if (!source) throw new Error("Source not found.");
+
     const connector = getConnector(source as ExternalSource);
     if (!connector) throw new Error("No connector registered for this source.");
 
@@ -169,9 +190,8 @@ export const importOnlineResult = createServerFn({ method: "POST" })
     }
 
     const payload = connector.importMetadata(result);
-    const outcome = await importPayload(supabase, payload, data.sourceId, userId, {
+    return importPayload(supabase, payload, data.sourceId, userId, {
       duplicateStrategy: data.duplicateStrategy,
       linkModelId: data.linkModelId ?? null,
     });
-    return outcome;
   });
