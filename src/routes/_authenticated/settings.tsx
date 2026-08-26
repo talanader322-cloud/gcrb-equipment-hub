@@ -79,7 +79,10 @@ function SettingsPage() {
           <CardTitle className="text-base">{t("settings.account")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1 text-sm">
-          <p className="font-mono text-xs text-muted-foreground">{user?.email}</p>
+          <p className="font-mono text-xs text-muted-foreground" dir="ltr">
+            {access.data?.profile?.username ?? "—"}
+          </p>
+
           {access.data?.roles.map((role) => (
             <p key={role}>{t(`role.${role}` as TranslationKey)}</p>
           ))}
