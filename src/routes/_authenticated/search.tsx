@@ -1,0 +1,306 @@
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Globe2, Loader2, Save, Search as SearchIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAccess, useSession } from "@/hooks/useSession";
+import { searchOnline } from "@/lib/online.functions";
+import { useI18n } from "@/lib/i18n";
+import type { OnlineResult, SearchScope } from "@/lib/types";
+import { catalogRepository } from "@/services/repositories/catalogRepository";
+import { personalRepository } from "@/services/repositories/personalRepository";
+import { searchService } from "@/services/searchService";
+
+const SCOPES: SearchScope[] = ["all", "models", "parts", "catalogs", "assemblies"];
+
+export const Route = createFileRoute("/_authenticated/search")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: typeof search.q === "string" ? search.q : "",
+    scope: SCOPES.includes(search.scope as SearchScope) ? (search.scope as SearchScope) : "all",
+    manufacturerId: typeof search.manufacturerId === "string" ? search.manufacturerId : "",
+  }),
+  head: () => ({
+    meta: [
+      { title: "البحث الشامل | GCRB Equipment Catalog" },
+      { name: "description", content: "Universal search across models, serials, parts and catalogs." },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
+  component: SearchPage,
+});
+
+function SearchPage() {
+  const { t } = useI18n();
+  const navigate = Route.useNavigate();
+  const { q, scope, manufacturerId } = Route.useSearch();
+  const { user } = useSession();
+  const access = useAccess(user?.id);
+  const [term, setTerm] = useState(q);
+  const [online, setOnline] = useState<OnlineResult[]>([]);
+
+  useEffect(() => setTerm(q), [q]);
+
+  const manufacturers = useQuery({
+    queryKey: ["manufacturers"],
+    queryFn: () => catalogRepository.listManufacturers(),
+  });
+
+  const local = useQuery({
+    queryKey: ["local-search", q, scope, manufacturerId],
+    enabled: q.length > 0,
+    queryFn: () =>
+      searchService.searchLocal(q, scope, manufacturerId ? { manufacturerId } : {}),
+  });
+
+  const onlineSearch = useMutation({
+    mutationFn: () =>
+      searchOnline({ data: { query: q, filters: manufacturerId ? { manufacturerId } : {} } }),
+    onSuccess: (result) => {
+      setOnline(result.results);
+      for (const failure of result.errors) toast.error(`${failure.source}: ${failure.message}`);
+      if (result.results.length === 0) toast.info(t("search.noOnline"));
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const saveSearch = useMutation({
+    mutationFn: () =>
+      personalRepository.saveSearch(user!.id, q, { scope, manufacturerId: manufacturerId || null }),
+    onSuccess: () => toast.success(t("search.saved")),
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    navigate({ to: ".", search: (prev) => ({ ...prev, q: term.trim() }) });
+  }
+
+  const results = local.data;
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{t("search.title")}</h1>
+        {q && (
+          <Button variant="outline" size="sm" onClick={() => saveSearch.mutate()}>
+            <Save className="me-2 size-4" />
+            {t("search.saveSearch")}
+          </Button>
+        )}
+      </div>
+
+      <Card>
+        <CardContent className="space-y-3 p-4">
+          <form onSubmit={submit} className="flex flex-wrap gap-2">
+            <Input
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              placeholder={t("top.searchPlaceholder")}
+              className="min-w-[240px] flex-1 font-mono"
+            />
+            <Select
+              value={manufacturerId || "any"}
+              onValueChange={(value) =>
+                navigate({
+                  to: ".",
+                  search: (prev) => ({ ...prev, manufacturerId: value === "any" ? "" : value }),
+                })
+              }
+            >
+              <SelectTrigger className="w-[190px]">
+                <SelectValue placeholder={t("filter.manufacturer")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">{t("filter.any")}</SelectItem>
+                {manufacturers.data?.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button type="submit">
+              <SearchIcon className="me-2 size-4" />
+              {t("search.run")}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!q || onlineSearch.isPending}
+              onClick={() => onlineSearch.mutate()}
+            >
+              {onlineSearch.isPending ? (
+                <Loader2 className="me-2 size-4 animate-spin" />
+              ) : (
+                <Globe2 className="me-2 size-4" />
+              )}
+              {t("search.online")}
+            </Button>
+          </form>
+
+          <Tabs
+            value={scope}
+            onValueChange={(value) =>
+              navigate({ to: ".", search: (prev) => ({ ...prev, scope: value as SearchScope }) })
+            }
+          >
+            <TabsList>
+              {SCOPES.map((item) => (
+                <TabsTrigger key={item} value={item}>
+                  {t(`scope.${item}` as never)}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
+          {results && (
+            <p className="font-mono text-xs text-muted-foreground">
+              {t("search.normalizedAs")}: {results.normalizedQuery || "—"} ·{" "}
+              {t("search.resultCount", { count: results.total })}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {!q && <p className="text-sm text-muted-foreground">{t("search.emptyQuery")}</p>}
+      {local.isLoading && <Skeleton className="h-40 w-full" />}
+      {local.isError && <p className="text-sm text-destructive">{(local.error as Error).message}</p>}
+
+      {results && results.total === 0 && (
+        <Card>
+          <CardContent className="space-y-2 p-6 text-center">
+            <p className="text-sm font-medium">{t("search.noLocal")}</p>
+            <p className="text-xs text-muted-foreground">{t("search.onlineHint")}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {results && results.models.length > 0 && (
+        <ResultGroup title={t("search.groupModels")}>
+          {results.models.map((row) => (
+            <Link
+              key={row.id}
+              to="/models/$modelId"
+              params={{ modelId: row.id }}
+              className="block rounded-md border border-border p-3 hover:bg-accent/60"
+            >
+              <p className="font-mono text-sm font-semibold">{row.model_name}</p>
+              <p className="text-xs text-muted-foreground">
+                {row.manufacturer?.name} · {row.equipment_type?.name ?? "—"}
+              </p>
+            </Link>
+          ))}
+        </ResultGroup>
+      )}
+
+      {results && results.parts.length > 0 && (
+        <ResultGroup title={t("search.groupParts")}>
+          {results.parts.map((row) => (
+            <Link
+              key={row.id}
+              to="/parts/$partId"
+              params={{ partId: row.id }}
+              className="block rounded-md border border-border p-3 hover:bg-accent/60"
+            >
+              <p className="font-mono text-sm font-semibold">{row.primary_part_number}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {row.description ?? "—"} · {row.manufacturer?.name}
+              </p>
+            </Link>
+          ))}
+        </ResultGroup>
+      )}
+
+      {results && results.catalogs.length > 0 && (
+        <ResultGroup title={t("search.groupCatalogs")}>
+          {results.catalogs.map((row) => (
+            <Link
+              key={row.id}
+              to="/catalogs/$catalogId"
+              params={{ catalogId: row.id }}
+              className="block rounded-md border border-border p-3 hover:bg-accent/60"
+            >
+              <p className="text-sm font-semibold">{row.title}</p>
+              <p className="font-mono text-xs text-muted-foreground">
+                {row.catalog_number ?? "—"} · {row.manufacturer?.name}
+              </p>
+            </Link>
+          ))}
+        </ResultGroup>
+      )}
+
+      {results && results.assemblies.length > 0 && (
+        <ResultGroup title={t("search.groupAssemblies")}>
+          {results.assemblies.map((row) => (
+            <Link
+              key={row.id}
+              to="/assemblies/$assemblyId"
+              params={{ assemblyId: row.id }}
+              className="block rounded-md border border-border p-3 hover:bg-accent/60"
+            >
+              <p className="text-sm font-semibold">{row.title}</p>
+              <p className="font-mono text-xs text-muted-foreground">
+                {row.assembly_number ?? "—"} · {row.catalog?.title}
+              </p>
+            </Link>
+          ))}
+        </ResultGroup>
+      )}
+
+      {online.length > 0 && (
+        <ResultGroup title={t("search.groupOnline")}>
+          {online.map((row) => (
+            <div key={`${row.sourceId}-${row.externalId}`} className="rounded-md border border-dashed border-border p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-semibold">{row.title}</p>
+                <Badge variant="outline">{t("state.temporary")}</Badge>
+                {row.isDemo && <Badge variant="secondary">{t("sources.demoBadge")}</Badge>}
+              </div>
+              <p className="font-mono text-xs text-muted-foreground">
+                {row.manufacturer ?? "—"} · {row.model ?? "—"} · {row.partNumber ?? "—"} ·{" "}
+                {row.sourceName}
+              </p>
+              {access.data?.canManage ? (
+                <Button asChild variant="link" size="sm" className="px-0">
+                  <Link
+                    to="/import"
+                    search={{ sourceId: row.sourceId, externalId: row.externalId }}
+                  >
+                    {t("action.preview")}
+                  </Link>
+                </Button>
+              ) : (
+                <p className="mt-1 text-[11px] text-muted-foreground">{t("import.notPermitted")}</p>
+              )}
+            </div>
+          ))}
+        </ResultGroup>
+      )}
+    </div>
+  );
+}
+
+function ResultGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-2 md:grid-cols-2">{children}</CardContent>
+    </Card>
+  );
+}
