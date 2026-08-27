@@ -50,9 +50,36 @@ function escapeOr(value: string): string {
 }
 
 export const assetRepository = {
+  /** Resolve model ids for model-scoped filters and for model-name search. */
+  async resolveModelIds(params: {
+    manufacturerId?: string;
+    equipmentTypeId?: string;
+    modelSearch?: string;
+  }): Promise<string[]> {
+    let query = supabase.from("machine_models").select("id").limit(1000);
+    if (params.manufacturerId) query = query.eq("manufacturer_id", params.manufacturerId);
+    if (params.equipmentTypeId) query = query.eq("equipment_type_id", params.equipmentTypeId);
+    if (params.modelSearch) query = query.ilike("model_name", `%${params.modelSearch}%`);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row) => row.id);
+  },
+
   async listAssets(filters: AssetFilters = {}) {
     const page = filters.page ?? 1;
     const pageSize = filters.pageSize ?? 48;
+    const term = filters.search ? escapeOr(filters.search) : "";
+
+    // Model-scoped filters (manufacturer / equipment type) are resolved to model
+    // ids first, which is more predictable than filtering an embedded relation.
+    let scopedModelIds: string[] | null = null;
+    if (filters.manufacturerId || filters.equipmentTypeId) {
+      scopedModelIds = await this.resolveModelIds({
+        ...(filters.manufacturerId ? { manufacturerId: filters.manufacturerId } : {}),
+        ...(filters.equipmentTypeId ? { equipmentTypeId: filters.equipmentTypeId } : {}),
+      });
+      if (scopedModelIds.length === 0) return { rows: [], total: 0 };
+    }
 
     let query = supabase
       .from("machine_assets")
@@ -62,49 +89,34 @@ export const assetRepository = {
 
     if (filters.branch) query = query.eq("branch", filters.branch);
     if (filters.manufactureYear) query = query.eq("manufacture_year", filters.manufactureYear);
-    if (filters.manufacturerId) {
-      query = query.eq("machine_model.manufacturer_id", filters.manufacturerId);
-    }
-    if (filters.equipmentTypeId) {
-      query = query.eq("machine_model.equipment_type_id", filters.equipmentTypeId);
-    }
+    if (scopedModelIds) query = query.in("machine_model_id", scopedModelIds);
 
-    const term = filters.search ? escapeOr(filters.search) : "";
     if (term) {
-      query = query.or(
-        [
-          `serial_number.ilike.%${term}%`,
-          `asset_number.ilike.%${term}%`,
-          `branch.ilike.%${term}%`,
-          `project.ilike.%${term}%`,
-        ].join(","),
-      );
+      // Search covers serial number, asset number and model name.
+      const modelMatches = await this.resolveModelIds({ modelSearch: term });
+      const clauses = [
+        `serial_number.ilike.%${term}%`,
+        `asset_number.ilike.%${term}%`,
+        `branch.ilike.%${term}%`,
+        `project.ilike.%${term}%`,
+      ];
+      if (modelMatches.length > 0) {
+        clauses.push(`machine_model_id.in.(${modelMatches.join(",")})`);
+      }
+      query = query.or(clauses.join(","));
     }
 
     const { data, error, count } = await query;
     if (error) throw new Error(error.message);
 
-    let rows = (data ?? []) as unknown as AssetListRow[];
-
-    // Model-scoped filters are applied through the embedded relation; PostgREST
-    // returns the parent row with a null relation when it does not match.
-    if (filters.manufacturerId || filters.equipmentTypeId) {
-      rows = rows.filter((row) => row.machine_model !== null);
-    }
-    if (term) {
-      const lowered = term.toLowerCase();
-      const matchesModel = rows.filter((row) =>
-        row.machine_model?.model_name?.toLowerCase().includes(lowered),
-      );
-      if (rows.length === 0 && matchesModel.length > 0) rows = matchesModel;
-    }
-
+    const rows = (data ?? []) as unknown as AssetListRow[];
     const counts = await this.manualCounts(rows.map((row) => row.id));
     return {
       rows: rows.map((row) => ({ ...row, manualCount: counts[row.id] ?? 0 })),
       total: count ?? rows.length,
     };
   },
+
 
   /** Assets whose model matches the given machine model. */
   async listAssetsByModel(machineModelId: string) {
