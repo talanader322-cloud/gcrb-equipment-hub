@@ -22,7 +22,7 @@ import { useI18n } from "@/lib/i18n";
 import { assetRepository } from "@/services/repositories/assetRepository";
 import { catalogRepository } from "@/services/repositories/catalogRepository";
 
-export const Route = createFileRoute("/_authenticated/assets")({
+export const Route = createFileRoute("/_authenticated/assets/")({
   validateSearch: (search: Record<string, unknown>) => ({
     manufacturerId: typeof search["manufacturerId"] === "string" ? search["manufacturerId"] : "",
     equipmentTypeId: typeof search["equipmentTypeId"] === "string" ? search["equipmentTypeId"] : "",
