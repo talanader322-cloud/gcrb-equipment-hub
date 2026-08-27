@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAccess, useSession } from "@/hooks/useSession";
 import { useI18n } from "@/lib/i18n";
 import { catalogRepository } from "@/services/repositories/catalogRepository";
 
@@ -26,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/equipment")({
   head: () => ({
     meta: [
       { title: "المعدات والموديلات | GCRB Equipment Catalog" },
-      { name: "description", content: "Machine models, series and serial ranges by manufacturer." },
+      { name: "description", content: "Machine models, assets, series and serial ranges by manufacturer." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -35,8 +38,11 @@ export const Route = createFileRoute("/_authenticated/equipment")({
 
 function EquipmentPage() {
   const { t, locale } = useI18n();
+  const { user } = useSession();
+  const access = useAccess(user?.id);
   const navigate = Route.useNavigate();
   const { manufacturerId, equipmentTypeId, q } = Route.useSearch();
+  const canManage = Boolean(access.data?.canManageCatalog || access.data?.isAdmin);
 
   const manufacturers = useQuery({
     queryKey: ["manufacturers"],
@@ -59,7 +65,17 @@ function EquipmentPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-semibold tracking-tight">{t("nav.equipment")}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{t("nav.equipment")}</h1>
+        {canManage && (
+          <Button asChild>
+            <Link to="/equipment/new">
+              <Plus className="me-2 size-4" />
+              {locale === "ar" ? "إضافة معدة جديدة وكتالوجاتها" : "New equipment & manuals"}
+            </Link>
+          </Button>
+        )}
+      </div>
 
       <Card>
         <CardContent className="flex flex-wrap gap-2 p-4">
