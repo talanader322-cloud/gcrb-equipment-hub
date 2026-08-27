@@ -9,15 +9,28 @@ All 12 architectural corrections are accepted and folded into the plan below. No
 - `external_sources`: Demo disabled; K-Part = `k_part_public` connector; TehCat / 777parts / AVRORA = `link_template`; `allows_download = false` everywhere.
 - `sources.tsx` writes `search_url_template`, `allows_download`, `manufacturer_scope`, `notes` into `configuration` JSON instead of the real Phase 2 columns.
 
-## Schema changes required (smallest safe set)
-1. `machine_assets.image_url text NULL` — asset-specific photo.
-2. `asset_manuals.catalog_id` becomes the required link: backfill a `catalog` + `catalog_file` row for any existing manual (currently 0 rows), then `NOT NULL` + keep `storage_path` only as a legacy/nullable mirror.
-3. `diagram_hotspots`: add CHECK constraints `x, y, width, height` between 0 and 1, plus a column comment declaring the normalized standard. Table is empty, so this is safe.
-4. Storage: reuse the existing private `catalogs` bucket for asset manuals and downloaded files. Add an `equipment-images` public-read bucket only if machine photos should render without signed URLs — otherwise reuse signed URLs from a private bucket (my recommendation, no new bucket).
+## Approved decisions (locked)
+- PR #4 is already merged into main (`4261beda`). No merge attempt, no rebuild of Phase 2/3 — extend current main.
+- Equipment photos: **private storage + signed URLs**, reusing the existing private `machine-images` bucket. No public bucket. `machine_models.image_url` stays model-level; `machine_assets.image_url` is asset-specific.
+- `allows_download = false` for **all** sources through stages A–G. K-Part = verified metadata only; TehCat / 777parts / AVRORA = managed links (AVRORA disabled until a verified URL is configured). Stage H is built but capability-gated and effectively off.
+- No real data required to start: stages A–G ship with professional empty states; any temporary test record is removed after verification.
 
-No other schema change is needed; `machine_assets`, `asset_manuals`, `diagrams`, `diagram_hotspots` and their RLS already exist.
+## Stage B orchestration correction (accepted)
+Storage and Postgres cannot share one transaction. The pipeline is an **orchestrated transaction**:
+1. Validate the PDF (type + `%PDF-` magic bytes + size).
+2. Upload to the private `catalogs` bucket.
+3. One atomic database RPC creates `catalogs` → `catalog_files` → `asset_manuals` together.
+4. On DB failure: delete the uploaded storage object and return the error. On upload failure: no database rows are written. Never an orphan storage file.
 
-## Implementation order
+## Schema migration (first step — approval card required)
+1. `machine_assets.image_url text NULL` + comment (asset-specific private photo path).
+2. `asset_manuals`: `storage_path` becomes a nullable legacy mirror; `catalog_id` becomes `NOT NULL` behind a guard that aborts if any row still lacks a catalog (currently 0 rows).
+3. `diagram_hotspots`: CHECK constraint `x, y, width, height` in [0,1] **and** `x + width <= 1`, `y + height <= 1`, plus a table comment declaring the normalized standard. Table is empty, so no coordinate conversion.
+4. No new bucket: private `catalogs` for documents, private `machine-images` for photos.
+
+Nothing else in the schema is touched.
+
+## Implementation order (Migration + A + B first, then report and pause for your review)
 
 ### A. Machine assets foundation
 - `assetRepository`: list/get/create/update assets, list manuals, link/unlink manual catalogs.
@@ -27,7 +40,7 @@ No other schema change is needed; `machine_assets`, `asset_manuals`, `diagrams`,
 - Asset photo upload (managers only) writing `machine_assets.image_url`.
 
 ### B. Unify original manuals with the catalog system
-- Rework the upload flow in `NewEquipmentPanel` (and add the same on the asset page) so each uploaded PDF creates, in one transaction: `catalogs` row (manufacturer, model, catalog_type from a selector, language, revision, serial applicability) → `catalog_files` row in the private `catalogs` bucket → `asset_manuals` row referencing that `catalog_id`.
+- Rework the upload flow in `NewEquipmentPanel` (and add the same on the asset page) so each uploaded PDF runs the orchestrated transaction above: validate → upload to the private `catalogs` bucket → atomic RPC creating the `catalogs` row (manufacturer, model, catalog_type selector, title, language, revision, serial applicability) + `catalog_files` row + `asset_manuals` row → cleanup of the storage object if the RPC fails.
 - `asset_manuals` becomes purely the asset↔catalog association plus asset-scoped metadata (manual_type, serial_from/to, source_type = `original_cd`).
 - Result: CD manuals, admin uploads, and permitted external downloads all open in the same Catalog Viewer and use the same OfflineCatalogStore. No second viewer, no second storage path.
 
