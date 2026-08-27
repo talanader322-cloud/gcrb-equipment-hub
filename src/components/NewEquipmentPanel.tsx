@@ -93,7 +93,11 @@ export function NewEquipmentPanel({ onSaved }: { onSaved?: () => void }) {
   async function save() {
     if (!user?.id || !form.machineModelId || !form.serialNumber.trim()) return;
     if (manuals.some((manual) => manual.file.type && manual.file.type !== "application/pdf")) {
-      toast.error(locale === "ar" ? "الإصدار الحالي يقبل ملفات PDF فقط." : "This version accepts PDF files only.");
+      toast.error(
+        locale === "ar"
+          ? "الإصدار الحالي يقبل ملفات PDF فقط."
+          : "This version accepts PDF files only.",
+      );
       return;
     }
 
@@ -147,8 +151,19 @@ export function NewEquipmentPanel({ onSaved }: { onSaved?: () => void }) {
         setProgress(Math.round(((index + 1) / Math.max(manuals.length, 1)) * 100));
       }
 
-      toast.success(locale === "ar" ? "تمت إضافة المعدة وحفظ كتالوجاتها." : "Equipment and manuals saved.");
-      setForm({ machineModelId: "", serialNumber: "", assetNumber: "", manufactureYear: "", branch: "", project: "", purchaseReference: "", notes: "" });
+      toast.success(
+        locale === "ar" ? "تمت إضافة المعدة وحفظ كتالوجاتها." : "Equipment and manuals saved.",
+      );
+      setForm({
+        machineModelId: "",
+        serialNumber: "",
+        assetNumber: "",
+        manufactureYear: "",
+        branch: "",
+        project: "",
+        purchaseReference: "",
+        notes: "",
+      });
       setManuals([]);
       onSaved?.();
     } catch (error) {
@@ -162,59 +177,175 @@ export function NewEquipmentPanel({ onSaved }: { onSaved?: () => void }) {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{locale === "ar" ? "إضافة معدة جديدة مع كتالوجاتها" : "New Equipment & Manuals"}</CardTitle>
+          <CardTitle className="text-base">
+            {locale === "ar" ? "إضافة معدة جديدة مع كتالوجاتها" : "New Equipment & Manuals"}
+          </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           <Field label={locale === "ar" ? "الموديل" : "Model"}>
-            <Select value={form.machineModelId} onValueChange={(value) => setForm({ ...form, machineModelId: value })}>
-              <SelectTrigger><SelectValue placeholder={locale === "ar" ? "اختر الموديل" : "Select model"} /></SelectTrigger>
+            <Select
+              value={form.machineModelId}
+              onValueChange={(value) => setForm({ ...form, machineModelId: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={locale === "ar" ? "اختر الموديل" : "Select model"} />
+              </SelectTrigger>
               <SelectContent>
                 {models.data?.rows.map((model) => (
-                  <SelectItem key={model.id} value={model.id}>{model.manufacturer?.name} — {model.model_name}</SelectItem>
+                  <SelectItem key={model.id} value={model.id}>
+                    {model.manufacturer?.name} — {model.model_name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Serial Number"><Input dir="ltr" value={form.serialNumber} onChange={(e) => setForm({ ...form, serialNumber: e.target.value })} /></Field>
-          <Field label={locale === "ar" ? "رقم الأصل / الرقم المؤسسي" : "Asset number"}><Input dir="ltr" value={form.assetNumber} onChange={(e) => setForm({ ...form, assetNumber: e.target.value })} /></Field>
-          <Field label={locale === "ar" ? "سنة الصنع" : "Manufacture year"}><Input dir="ltr" type="number" value={form.manufactureYear} onChange={(e) => setForm({ ...form, manufactureYear: e.target.value })} /></Field>
-          <Field label={locale === "ar" ? "الفرع" : "Branch"}><Input value={form.branch} onChange={(e) => setForm({ ...form, branch: e.target.value })} /></Field>
-          <Field label={locale === "ar" ? "المشروع" : "Project"}><Input value={form.project} onChange={(e) => setForm({ ...form, project: e.target.value })} /></Field>
-          <Field label={locale === "ar" ? "مرجع الشراء" : "Purchase reference"}><Input value={form.purchaseReference} onChange={(e) => setForm({ ...form, purchaseReference: e.target.value })} /></Field>
-          <Field label={locale === "ar" ? "ملاحظات" : "Notes"}><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field>
-          {selectedModel && <div className="rounded-md border p-3 text-xs text-muted-foreground">{selectedModel.manufacturer?.name} / {selectedModel.model_name}</div>}
+          <Field label="Serial Number">
+            <Input
+              dir="ltr"
+              value={form.serialNumber}
+              onChange={(e) => setForm({ ...form, serialNumber: e.target.value })}
+            />
+          </Field>
+          <Field label={locale === "ar" ? "رقم الأصل / الرقم المؤسسي" : "Asset number"}>
+            <Input
+              dir="ltr"
+              value={form.assetNumber}
+              onChange={(e) => setForm({ ...form, assetNumber: e.target.value })}
+            />
+          </Field>
+          <Field label={locale === "ar" ? "سنة الصنع" : "Manufacture year"}>
+            <Input
+              dir="ltr"
+              type="number"
+              value={form.manufactureYear}
+              onChange={(e) => setForm({ ...form, manufactureYear: e.target.value })}
+            />
+          </Field>
+          <Field label={locale === "ar" ? "الفرع" : "Branch"}>
+            <Input
+              value={form.branch}
+              onChange={(e) => setForm({ ...form, branch: e.target.value })}
+            />
+          </Field>
+          <Field label={locale === "ar" ? "المشروع" : "Project"}>
+            <Input
+              value={form.project}
+              onChange={(e) => setForm({ ...form, project: e.target.value })}
+            />
+          </Field>
+          <Field label={locale === "ar" ? "مرجع الشراء" : "Purchase reference"}>
+            <Input
+              value={form.purchaseReference}
+              onChange={(e) => setForm({ ...form, purchaseReference: e.target.value })}
+            />
+          </Field>
+          <Field label={locale === "ar" ? "ملاحظات" : "Notes"}>
+            <Input
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            />
+          </Field>
+          {selectedModel && (
+            <div className="rounded-md border p-3 text-xs text-muted-foreground">
+              {selectedModel.manufacturer?.name} / {selectedModel.model_name}
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">{locale === "ar" ? "الكتالوجات الأصلية المرفقة بالمعدة" : "Original manuals supplied with equipment"}</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">
+            {locale === "ar"
+              ? "الكتالوجات الأصلية المرفقة بالمعدة"
+              : "Original manuals supplied with equipment"}
+          </CardTitle>
+        </CardHeader>
         <CardContent className="space-y-4">
           <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-sm hover:bg-muted/40">
             <FileUp className="size-5" />
             {locale === "ar" ? "اختر عدة ملفات PDF دفعة واحدة" : "Select multiple PDF files"}
-            <input className="hidden" type="file" accept="application/pdf,.pdf" multiple onChange={(event) => {
-              const files = Array.from(event.target.files ?? []);
-              setManuals((current) => [...current, ...files.map((file) => ({ id: crypto.randomUUID(), file, type: inferManualType(file.name), title: file.name.replace(/\.pdf$/i, "") }))]);
-              event.currentTarget.value = "";
-            }} />
+            <input
+              className="hidden"
+              type="file"
+              accept="application/pdf,.pdf"
+              multiple
+              onChange={(event) => {
+                const files = Array.from(event.target.files ?? []);
+                setManuals((current) => [
+                  ...current,
+                  ...files.map((file) => ({
+                    id: crypto.randomUUID(),
+                    file,
+                    type: inferManualType(file.name),
+                    title: file.name.replace(/\.pdf$/i, ""),
+                  })),
+                ]);
+                event.currentTarget.value = "";
+              }}
+            />
           </label>
 
           {manuals.map((manual) => (
-            <div key={manual.id} className="grid items-center gap-2 rounded-md border p-3 md:grid-cols-[1fr_220px_auto]">
+            <div
+              key={manual.id}
+              className="grid items-center gap-2 rounded-md border p-3 md:grid-cols-[1fr_220px_auto]"
+            >
               <div>
-                <Input value={manual.title} onChange={(e) => setManuals((items) => items.map((item) => item.id === manual.id ? { ...item, title: e.target.value } : item))} />
-                <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{manual.file.name} — {(manual.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                <Input
+                  value={manual.title}
+                  onChange={(e) =>
+                    setManuals((items) =>
+                      items.map((item) =>
+                        item.id === manual.id ? { ...item, title: e.target.value } : item,
+                      ),
+                    )
+                  }
+                />
+                <p className="mt-1 text-xs text-muted-foreground" dir="ltr">
+                  {manual.file.name} — {(manual.file.size / 1024 / 1024).toFixed(2)} MB
+                </p>
               </div>
-              <Select value={manual.type} onValueChange={(value) => setManuals((items) => items.map((item) => item.id === manual.id ? { ...item, type: value as ManualType } : item))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{MANUAL_TYPES.map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent>
+              <Select
+                value={manual.type}
+                onValueChange={(value) =>
+                  setManuals((items) =>
+                    items.map((item) =>
+                      item.id === manual.id ? { ...item, type: value as ManualType } : item,
+                    ),
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MANUAL_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
-              <Button variant="ghost" size="icon" onClick={() => setManuals((items) => items.filter((item) => item.id !== manual.id))}><X className="size-4" /></Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setManuals((items) => items.filter((item) => item.id !== manual.id))}
+              >
+                <X className="size-4" />
+              </Button>
             </div>
           ))}
 
-          {saving && <div className="text-sm text-muted-foreground">{locale === "ar" ? `جاري الحفظ... ${progress}%` : `Saving... ${progress}%`}</div>}
-          <Button disabled={saving || !form.machineModelId || !form.serialNumber.trim()} onClick={save}>
+          {saving && (
+            <div className="text-sm text-muted-foreground">
+              {locale === "ar" ? `جاري الحفظ... ${progress}%` : `Saving... ${progress}%`}
+            </div>
+          )}
+          <Button
+            disabled={saving || !form.machineModelId || !form.serialNumber.trim()}
+            onClick={save}
+          >
             <Plus className="me-2 size-4" />
             {locale === "ar" ? "حفظ المعدة والكتالوجات" : "Save equipment and manuals"}
           </Button>
@@ -225,5 +356,10 @@ export function NewEquipmentPanel({ onSaved }: { onSaved?: () => void }) {
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>;
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      {children}
+    </div>
+  );
 }

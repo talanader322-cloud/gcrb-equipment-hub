@@ -38,7 +38,11 @@ function sourceConfig(value: unknown): LinkConfig {
   return value && typeof value === "object" ? (value as LinkConfig) : {};
 }
 
-function sourceSearchUrl(baseUrl: string | null, configuration: unknown, query: string): string | null {
+function sourceSearchUrl(
+  baseUrl: string | null,
+  configuration: unknown,
+  query: string,
+): string | null {
   const config = sourceConfig(configuration);
   const template = config.search_url_template?.trim();
   if (template) return template.replaceAll("{query}", encodeURIComponent(query));
@@ -57,7 +61,10 @@ export const Route = createFileRoute("/_authenticated/search")({
   head: () => ({
     meta: [
       { title: "البحث الشامل | GCRB Equipment Catalog" },
-      { name: "description", content: "Universal search across models, serials, parts and catalogs." },
+      {
+        name: "description",
+        content: "Universal search across models, serials, parts and catalogs.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -90,7 +97,8 @@ function SearchPage() {
   });
 
   const onlineSearch = useMutation({
-    mutationFn: () => searchOnline({ data: { query: q, filters: manufacturerId ? { manufacturerId } : {} } }),
+    mutationFn: () =>
+      searchOnline({ data: { query: q, filters: manufacturerId ? { manufacturerId } : {} } }),
     onSuccess: (result) => {
       setOnline(result.results);
       for (const failure of result.errors) toast.error(`${failure.source}: ${failure.message}`);
@@ -100,7 +108,8 @@ function SearchPage() {
   });
 
   const saveSearch = useMutation({
-    mutationFn: () => personalRepository.saveSearch(user!.id, q, { scope, manufacturerId: manufacturerId || null }),
+    mutationFn: () =>
+      personalRepository.saveSearch(user!.id, q, { scope, manufacturerId: manufacturerId || null }),
     onSuccess: () => toast.success(t("search.saved")),
     onError: (error: Error) => toast.error(error.message),
   });
@@ -134,35 +143,82 @@ function SearchPage() {
       <Card>
         <CardContent className="space-y-3 p-4">
           <form onSubmit={submit} className="flex flex-wrap gap-2">
-            <Input value={term} onChange={(event) => setTerm(event.target.value)} placeholder={t("top.searchPlaceholder")} className="min-w-[240px] flex-1 font-mono" />
-            <Select value={manufacturerId || "any"} onValueChange={(value) => navigate({ to: ".", search: (prev) => ({ ...prev, manufacturerId: value === "any" ? "" : value }) })}>
-              <SelectTrigger className="w-[190px]"><SelectValue placeholder={t("filter.manufacturer")} /></SelectTrigger>
+            <Input
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              placeholder={t("top.searchPlaceholder")}
+              className="min-w-[240px] flex-1 font-mono"
+            />
+            <Select
+              value={manufacturerId || "any"}
+              onValueChange={(value) =>
+                navigate({
+                  to: ".",
+                  search: (prev) => ({ ...prev, manufacturerId: value === "any" ? "" : value }),
+                })
+              }
+            >
+              <SelectTrigger className="w-[190px]">
+                <SelectValue placeholder={t("filter.manufacturer")} />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="any">{t("filter.any")}</SelectItem>
-                {manufacturers.data?.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+                {manufacturers.data?.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            <Button type="submit"><SearchIcon className="me-2 size-4" />{t("search.run")}</Button>
-            <Button type="button" variant="secondary" disabled={!q || onlineSearch.isPending} onClick={() => onlineSearch.mutate()}>
-              {onlineSearch.isPending ? <Loader2 className="me-2 size-4 animate-spin" /> : <Globe2 className="me-2 size-4" />}
+            <Button type="submit">
+              <SearchIcon className="me-2 size-4" />
+              {t("search.run")}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!q || onlineSearch.isPending}
+              onClick={() => onlineSearch.mutate()}
+            >
+              {onlineSearch.isPending ? (
+                <Loader2 className="me-2 size-4 animate-spin" />
+              ) : (
+                <Globe2 className="me-2 size-4" />
+              )}
               {t("search.online")}
             </Button>
           </form>
 
-          <Tabs value={scope} onValueChange={(value) => navigate({ to: ".", search: (prev) => ({ ...prev, scope: value as SearchScope }) })}>
+          <Tabs
+            value={scope}
+            onValueChange={(value) =>
+              navigate({ to: ".", search: (prev) => ({ ...prev, scope: value as SearchScope }) })
+            }
+          >
             <TabsList>
-              {SCOPES.map((item) => <TabsTrigger key={item} value={item}>{t(`scope.${item}` as never)}</TabsTrigger>)}
+              {SCOPES.map((item) => (
+                <TabsTrigger key={item} value={item}>
+                  {t(`scope.${item}` as never)}
+                </TabsTrigger>
+              ))}
             </TabsList>
           </Tabs>
 
-          {results && <p className="font-mono text-xs text-muted-foreground">{t("search.normalizedAs")}: {results.normalizedQuery || "—"} · {t("search.resultCount", { count: results.total })}</p>}
+          {results && (
+            <p className="font-mono text-xs text-muted-foreground">
+              {t("search.normalizedAs")}: {results.normalizedQuery || "—"} ·{" "}
+              {t("search.resultCount", { count: results.total })}
+            </p>
+          )}
         </CardContent>
       </Card>
 
       {q && sourceLinks.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{locale === "ar" ? "البحث في المصادر المعتمدة" : "Search approved sources"}</CardTitle>
+            <CardTitle className="text-base">
+              {locale === "ar" ? "البحث في المصادر المعتمدة" : "Search approved sources"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             {sourceLinks.map(({ source, url }) => (
@@ -184,28 +240,126 @@ function SearchPage() {
 
       {!q && <p className="text-sm text-muted-foreground">{t("search.emptyQuery")}</p>}
       {local.isLoading && <Skeleton className="h-40 w-full" />}
-      {local.isError && <p className="text-sm text-destructive">{(local.error as Error).message}</p>}
-
-      {results && results.total === 0 && (
-        <Card><CardContent className="space-y-2 p-6 text-center"><p className="text-sm font-medium">{t("search.noLocal")}</p><p className="text-xs text-muted-foreground">{t("search.onlineHint")}</p></CardContent></Card>
+      {local.isError && (
+        <p className="text-sm text-destructive">{(local.error as Error).message}</p>
       )}
 
-      {results && results.models.length > 0 && <ResultGroup title={t("search.groupModels")}>{results.models.map((row) => <Link key={row.id} to="/models/$modelId" params={{ modelId: row.id }} className="block rounded-md border border-border p-3 hover:bg-accent/60"><p className="font-mono text-sm font-semibold">{row.model_name}</p><p className="text-xs text-muted-foreground">{row.manufacturer?.name} · {row.equipment_type?.name ?? "—"}</p></Link>)}</ResultGroup>}
+      {results && results.total === 0 && (
+        <Card>
+          <CardContent className="space-y-2 p-6 text-center">
+            <p className="text-sm font-medium">{t("search.noLocal")}</p>
+            <p className="text-xs text-muted-foreground">{t("search.onlineHint")}</p>
+          </CardContent>
+        </Card>
+      )}
 
-      {results && results.parts.length > 0 && <ResultGroup title={t("search.groupParts")}>{results.parts.map((row) => <Link key={row.id} to="/parts/$partId" params={{ partId: row.id }} className="block rounded-md border border-border p-3 hover:bg-accent/60"><p className="font-mono text-sm font-semibold">{row.primary_part_number}</p><p className="truncate text-xs text-muted-foreground">{row.description ?? "—"} · {row.manufacturer?.name}</p></Link>)}</ResultGroup>}
+      {results && results.models.length > 0 && (
+        <ResultGroup title={t("search.groupModels")}>
+          {results.models.map((row) => (
+            <Link
+              key={row.id}
+              to="/models/$modelId"
+              params={{ modelId: row.id }}
+              className="block rounded-md border border-border p-3 hover:bg-accent/60"
+            >
+              <p className="font-mono text-sm font-semibold">{row.model_name}</p>
+              <p className="text-xs text-muted-foreground">
+                {row.manufacturer?.name} · {row.equipment_type?.name ?? "—"}
+              </p>
+            </Link>
+          ))}
+        </ResultGroup>
+      )}
 
-      {results && results.catalogs.length > 0 && <ResultGroup title={t("search.groupCatalogs")}>{results.catalogs.map((row) => <Link key={row.id} to="/catalogs/$catalogId" params={{ catalogId: row.id }} className="block rounded-md border border-border p-3 hover:bg-accent/60"><p className="text-sm font-semibold">{row.title}</p><p className="font-mono text-xs text-muted-foreground">{row.catalog_number ?? "—"} · {row.manufacturer?.name}</p></Link>)}</ResultGroup>}
+      {results && results.parts.length > 0 && (
+        <ResultGroup title={t("search.groupParts")}>
+          {results.parts.map((row) => (
+            <Link
+              key={row.id}
+              to="/parts/$partId"
+              params={{ partId: row.id }}
+              className="block rounded-md border border-border p-3 hover:bg-accent/60"
+            >
+              <p className="font-mono text-sm font-semibold">{row.primary_part_number}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {row.description ?? "—"} · {row.manufacturer?.name}
+              </p>
+            </Link>
+          ))}
+        </ResultGroup>
+      )}
 
-      {results && results.assemblies.length > 0 && <ResultGroup title={t("search.groupAssemblies")}>{results.assemblies.map((row) => <Link key={row.id} to="/assemblies/$assemblyId" params={{ assemblyId: row.id }} className="block rounded-md border border-border p-3 hover:bg-accent/60"><p className="text-sm font-semibold">{row.title}</p><p className="font-mono text-xs text-muted-foreground">{row.assembly_number ?? "—"} · {row.catalog?.title}</p></Link>)}</ResultGroup>}
+      {results && results.catalogs.length > 0 && (
+        <ResultGroup title={t("search.groupCatalogs")}>
+          {results.catalogs.map((row) => (
+            <Link
+              key={row.id}
+              to="/catalogs/$catalogId"
+              params={{ catalogId: row.id }}
+              className="block rounded-md border border-border p-3 hover:bg-accent/60"
+            >
+              <p className="text-sm font-semibold">{row.title}</p>
+              <p className="font-mono text-xs text-muted-foreground">
+                {row.catalog_number ?? "—"} · {row.manufacturer?.name}
+              </p>
+            </Link>
+          ))}
+        </ResultGroup>
+      )}
+
+      {results && results.assemblies.length > 0 && (
+        <ResultGroup title={t("search.groupAssemblies")}>
+          {results.assemblies.map((row) => (
+            <Link
+              key={row.id}
+              to="/assemblies/$assemblyId"
+              params={{ assemblyId: row.id }}
+              className="block rounded-md border border-border p-3 hover:bg-accent/60"
+            >
+              <p className="text-sm font-semibold">{row.title}</p>
+              <p className="font-mono text-xs text-muted-foreground">
+                {row.assembly_number ?? "—"} · {row.catalog?.title}
+              </p>
+            </Link>
+          ))}
+        </ResultGroup>
+      )}
 
       {online.length > 0 && (
         <ResultGroup title={t("search.groupOnline")}>
           {online.map((row) => (
-            <div key={`${row.sourceId}-${row.externalId}`} className="rounded-md border border-dashed border-border p-3">
-              <div className="flex flex-wrap items-center gap-2"><p className="text-sm font-semibold">{row.title}</p><Badge variant="outline">{t("state.temporary")}</Badge>{row.isDemo && <Badge variant="secondary">{t("sources.demoBadge")}</Badge>}</div>
-              <p className="font-mono text-xs text-muted-foreground">{row.manufacturer ?? "—"} · {row.model ?? "—"} · {row.partNumber ?? "—"} · {row.sourceName}</p>
-              {row.externalUrl && <Button variant="link" size="sm" asChild className="px-0"><a href={row.externalUrl} target="_blank" rel="noreferrer">{locale === "ar" ? "فتح المصدر" : "Open source"}</a></Button>}
-              {access.data?.canManage ? <Button asChild variant="link" size="sm" className="px-0"><Link to="/import" search={{ sourceId: row.sourceId, externalId: row.externalId }}>{t("action.preview")}</Link></Button> : <p className="mt-1 text-[11px] text-muted-foreground">{t("import.notPermitted")}</p>}
+            <div
+              key={`${row.sourceId}-${row.externalId}`}
+              className="rounded-md border border-dashed border-border p-3"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-semibold">{row.title}</p>
+                <Badge variant="outline">{t("state.temporary")}</Badge>
+                {row.isDemo && <Badge variant="secondary">{t("sources.demoBadge")}</Badge>}
+              </div>
+              <p className="font-mono text-xs text-muted-foreground">
+                {row.manufacturer ?? "—"} · {row.model ?? "—"} · {row.partNumber ?? "—"} ·{" "}
+                {row.sourceName}
+              </p>
+              {row.externalUrl && (
+                <Button variant="link" size="sm" asChild className="px-0">
+                  <a href={row.externalUrl} target="_blank" rel="noreferrer">
+                    {locale === "ar" ? "فتح المصدر" : "Open source"}
+                  </a>
+                </Button>
+              )}
+              {access.data?.canManage ? (
+                <Button asChild variant="link" size="sm" className="px-0">
+                  <Link
+                    to="/import"
+                    search={{ sourceId: row.sourceId, externalId: row.externalId }}
+                  >
+                    {t("action.preview")}
+                  </Link>
+                </Button>
+              ) : (
+                <p className="mt-1 text-[11px] text-muted-foreground">{t("import.notPermitted")}</p>
+              )}
             </div>
           ))}
         </ResultGroup>
@@ -215,5 +369,12 @@ function SearchPage() {
 }
 
 function ResultGroup({ title, children }: { title: string; children: React.ReactNode }) {
-  return <Card><CardHeader><CardTitle className="text-base">{title}</CardTitle></CardHeader><CardContent className="grid gap-2 md:grid-cols-2">{children}</CardContent></Card>;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-2 md:grid-cols-2">{children}</CardContent>
+    </Card>
+  );
 }

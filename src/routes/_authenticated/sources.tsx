@@ -153,29 +153,63 @@ function SourcesPage() {
               }}
             >
               <Field label={locale === "ar" ? "اسم المصدر" : "Source name"}>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                <Input
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  required
+                />
               </Field>
               <Field label={locale === "ar" ? "رابط الموقع" : "Base URL"}>
-                <Input dir="ltr" type="url" value={form.baseUrl} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} placeholder="https://..." />
+                <Input
+                  dir="ltr"
+                  type="url"
+                  value={form.baseUrl}
+                  onChange={(e) => setForm({ ...form, baseUrl: e.target.value })}
+                  placeholder="https://..."
+                />
               </Field>
               <Field label={locale === "ar" ? "قالب رابط البحث" : "Search URL template"}>
-                <Input dir="ltr" value={form.searchTemplate} onChange={(e) => setForm({ ...form, searchTemplate: e.target.value })} placeholder="https://site/search?q={query}" />
+                <Input
+                  dir="ltr"
+                  value={form.searchTemplate}
+                  onChange={(e) => setForm({ ...form, searchTemplate: e.target.value })}
+                  placeholder="https://site/search?q={query}"
+                />
               </Field>
               <Field label={locale === "ar" ? "الشركات المدعومة" : "Manufacturers"}>
-                <Input value={form.manufacturers} onChange={(e) => setForm({ ...form, manufacturers: e.target.value })} placeholder="Komatsu, Caterpillar" />
+                <Input
+                  value={form.manufacturers}
+                  onChange={(e) => setForm({ ...form, manufacturers: e.target.value })}
+                  placeholder="Komatsu, Caterpillar"
+                />
               </Field>
               <Field label={locale === "ar" ? "أولوية البحث" : "Priority"}>
-                <Input dir="ltr" type="number" min="1" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} />
+                <Input
+                  dir="ltr"
+                  type="number"
+                  min="1"
+                  value={form.priority}
+                  onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                />
               </Field>
               <Field label={locale === "ar" ? "ملاحظات" : "Notes"}>
-                <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+                <Input
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                />
               </Field>
               <label className="flex items-center gap-2 text-sm">
-                <Switch checked={form.requiresAuth} onCheckedChange={(value) => setForm({ ...form, requiresAuth: value })} />
+                <Switch
+                  checked={form.requiresAuth}
+                  onCheckedChange={(value) => setForm({ ...form, requiresAuth: value })}
+                />
                 {locale === "ar" ? "يحتاج تسجيل دخول" : "Requires login"}
               </label>
               <label className="flex items-center gap-2 text-sm">
-                <Switch checked={form.allowsDownload} onCheckedChange={(value) => setForm({ ...form, allowsDownload: value })} />
+                <Switch
+                  checked={form.allowsDownload}
+                  onCheckedChange={(value) => setForm({ ...form, allowsDownload: value })}
+                />
                 {locale === "ar" ? "المصدر يسمح بالتنزيل" : "Source permits download"}
               </label>
               <div className="md:col-span-2 lg:col-span-3">
@@ -212,12 +246,44 @@ function SourcesPage() {
               <CardContent className="space-y-2 text-xs">
                 <Row label={t("sources.priority")} value={String(source.priority)} />
                 <Row label={t("sources.baseUrl")} value={source.base_url ?? "—"} mono />
-                <Row label={locale === "ar" ? "قالب البحث" : "Search template"} value={config.search_url_template ?? "—"} mono />
-                <Row label={locale === "ar" ? "التنزيل" : "Download"} value={config.allows_download ? (locale === "ar" ? "مسموح" : "Permitted") : (locale === "ar" ? "غير مؤكد" : "Not verified")} />
-                <Row label={locale === "ar" ? "الشركات" : "Manufacturers"} value={config.manufacturer_scope?.join(", ") || "—"} />
-                <Row label={t("sources.requiresAuth")} value={source.requires_authentication ? t("sources.enabled") : t("sources.disabled")} />
-                <Row label={t("sources.lastSuccess")} value={source.last_success_at ? formatDate(source.last_success_at) : t("sources.never")} />
-                {source.last_error && <p className="rounded-md bg-destructive/10 p-2 font-mono text-destructive">{source.last_error}</p>}
+                <Row
+                  label={locale === "ar" ? "قالب البحث" : "Search template"}
+                  value={config.search_url_template ?? "—"}
+                  mono
+                />
+                <Row
+                  label={locale === "ar" ? "التنزيل" : "Download"}
+                  value={
+                    config.allows_download
+                      ? locale === "ar"
+                        ? "مسموح"
+                        : "Permitted"
+                      : locale === "ar"
+                        ? "غير مؤكد"
+                        : "Not verified"
+                  }
+                />
+                <Row
+                  label={locale === "ar" ? "الشركات" : "Manufacturers"}
+                  value={config.manufacturer_scope?.join(", ") || "—"}
+                />
+                <Row
+                  label={t("sources.requiresAuth")}
+                  value={
+                    source.requires_authentication ? t("sources.enabled") : t("sources.disabled")
+                  }
+                />
+                <Row
+                  label={t("sources.lastSuccess")}
+                  value={
+                    source.last_success_at ? formatDate(source.last_success_at) : t("sources.never")
+                  }
+                />
+                {source.last_error && (
+                  <p className="rounded-md bg-destructive/10 p-2 font-mono text-destructive">
+                    {source.last_error}
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-2 pt-2">
                   {source.base_url && (
                     <Button size="sm" variant="outline" asChild>
@@ -228,7 +294,12 @@ function SourcesPage() {
                     </Button>
                   )}
                   {canManage && source.connector_key !== "link_template" && (
-                    <Button size="sm" variant="outline" disabled={test.isPending} onClick={() => test.mutate(source.id)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={test.isPending}
+                      onClick={() => test.mutate(source.id)}
+                    >
                       <PlugZap className="me-2 size-4" />
                       {t("sources.status")}
                     </Button>
@@ -262,7 +333,9 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
   return (
     <div className="flex items-start justify-between gap-3">
       <span className="text-muted-foreground">{label}</span>
-      <span className={mono ? "max-w-[65%] truncate font-mono" : "max-w-[65%] truncate"}>{value}</span>
+      <span className={mono ? "max-w-[65%] truncate font-mono" : "max-w-[65%] truncate"}>
+        {value}
+      </span>
     </div>
   );
 }

@@ -31,7 +31,10 @@ export const Route = createFileRoute("/_authenticated/equipment")({
   head: () => ({
     meta: [
       { title: "المعدات والموديلات | GCRB Equipment Catalog" },
-      { name: "description", content: "Machine models, assets, series and serial ranges by manufacturer." },
+      {
+        name: "description",
+        content: "Machine models, assets, series and serial ranges by manufacturer.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -74,8 +77,12 @@ function EquipmentPage() {
           <Button onClick={() => setShowNewAsset((value) => !value)}>
             {showNewAsset ? <X className="me-2 size-4" /> : <Plus className="me-2 size-4" />}
             {showNewAsset
-              ? locale === "ar" ? "إغلاق نموذج الإضافة" : "Close form"
-              : locale === "ar" ? "إضافة معدة جديدة وكتالوجاتها" : "New equipment & manuals"}
+              ? locale === "ar"
+                ? "إغلاق نموذج الإضافة"
+                : "Close form"
+              : locale === "ar"
+                ? "إضافة معدة جديدة وكتالوجاتها"
+                : "New equipment & manuals"}
           </Button>
         )}
       </div>
@@ -101,10 +108,16 @@ function EquipmentPage() {
               })
             }
           >
-            <SelectTrigger className="w-[200px]"><SelectValue placeholder={t("filter.manufacturer")} /></SelectTrigger>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder={t("filter.manufacturer")} />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="any">{t("filter.any")}</SelectItem>
-              {manufacturers.data?.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+              {manufacturers.data?.map((m) => (
+                <SelectItem key={m.id} value={m.id}>
+                  {m.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Select
@@ -116,7 +129,9 @@ function EquipmentPage() {
               })
             }
           >
-            <SelectTrigger className="w-[200px]"><SelectValue placeholder={t("filter.equipmentType")} /></SelectTrigger>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder={t("filter.equipmentType")} />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="any">{t("filter.any")}</SelectItem>
               {types.data?.map((item) => (
@@ -139,7 +154,9 @@ function EquipmentPage() {
                 <p className="text-xs text-muted-foreground">{row.manufacturer?.name}</p>
                 {row.equipment_type && (
                   <Badge variant="outline">
-                    {locale === "ar" ? (row.equipment_type.name_ar ?? row.equipment_type.name) : row.equipment_type.name}
+                    {locale === "ar"
+                      ? (row.equipment_type.name_ar ?? row.equipment_type.name)
+                      : row.equipment_type.name}
                   </Badge>
                 )}
               </CardContent>
@@ -147,7 +164,9 @@ function EquipmentPage() {
           </Link>
         ))}
       </div>
-      {models.data?.rows.length === 0 && <p className="text-sm text-muted-foreground">{t("state.empty")}</p>}
+      {models.data?.rows.length === 0 && (
+        <p className="text-sm text-muted-foreground">{t("state.empty")}</p>
+      )}
     </div>
   );
 }

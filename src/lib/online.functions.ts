@@ -129,7 +129,9 @@ export const previewOnlineImport = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!source) throw new Error("Source not found.");
     if (source.connector_key === "link_template") {
-      throw new Error("Managed source links cannot be imported until a dedicated connector is configured.");
+      throw new Error(
+        "Managed source links cannot be imported until a dedicated connector is configured.",
+      );
     }
     const connector = getConnector(source as ExternalSource);
     if (!connector) throw new Error("No connector registered for this source.");
@@ -168,7 +170,9 @@ export const importOnlineResult = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!source) throw new Error("Source not found.");
     if (source.connector_key === "link_template") {
-      throw new Error("Managed source links cannot be imported until a dedicated connector is configured.");
+      throw new Error(
+        "Managed source links cannot be imported until a dedicated connector is configured.",
+      );
     }
     const connector = getConnector(source as ExternalSource);
     if (!connector) throw new Error("No connector registered for this source.");
