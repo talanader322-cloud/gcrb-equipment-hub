@@ -25,7 +25,14 @@ export function AssetManualUploadPanel({ assetId }: { assetId: string }) {
     setSaving(true);
     setDone(0);
     try {
-      await uploadAssetManuals(assetId, drafts, (completed) => setDone(completed));
+      await uploadAssetManuals(
+        assetId,
+        drafts,
+        (completed) => setDone(completed),
+        // Successful manuals leave the pending list at once: a retry after a
+        // partial failure never re-uploads an already registered document.
+        (draftId) => setDrafts((current) => current.filter((draft) => draft.id !== draftId)),
+      );
       toast.success(t("assets.manualsSaved"));
       setDrafts([]);
       await queryClient.invalidateQueries({ queryKey: ["asset", assetId] });

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ import { catalogRepository } from "@/services/repositories/catalogRepository";
 
 export function NewEquipmentPanel({ onSaved }: { onSaved?: () => void }) {
   const { locale, t } = useI18n();
+  const navigate = useNavigate();
   const { user } = useSession();
   const access = useAccess(user?.id);
   const canManage = Boolean(access.data?.canManageCatalog);
