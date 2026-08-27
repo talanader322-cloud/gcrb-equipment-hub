@@ -9,30 +9,71 @@ ALTER TABLE public.external_sources
 -- Demo must never be enabled for production discovery.
 UPDATE public.external_sources SET enabled = false WHERE connector_key = 'demo';
 
--- Seed the source registry without pretending generic scraping is implemented.
+-- Seed approved heavy-equipment source registry. These are managed links until
+-- a dedicated permitted connector is implemented for the individual source.
 INSERT INTO public.external_sources
   (name, slug, source_type, connector_key, base_url, enabled, priority,
    requires_authentication, configuration, allows_download, search_url_template,
    manufacturer_scope, notes)
 VALUES
-  ('TehCat', 'tehcat', 'catalog_website', 'link_template', 'https://en.tehcat.ru/catalog/', true, 10,
-   false, '{"mode":"managed_link"}'::jsonb, false, NULL,
-   ARRAY['Komatsu','Caterpillar','Volvo CE','Hitachi','Hyundai','Doosan','Develon','Kobelco','JCB','CASE','Liebherr','SANY','XCMG'],
-   'Approved heavy-equipment catalog source. Dedicated connector may be added when a stable permitted interface is available.'),
-  ('777parts', '777parts', 'catalog_website', 'link_template', 'https://777parts.com/', true, 20,
-   false, '{"mode":"managed_link"}'::jsonb, false, NULL,
-   ARRAY['Komatsu'], 'Heavy-equipment parts diagrams/catalog source.'),
-  ('AVRORA PARTS', 'avrora-parts', 'catalog_website', 'link_template', NULL, false, 30,
-   false, '{"mode":"managed_link"}'::jsonb, false, NULL,
-   ARRAY['Komatsu','Caterpillar'], 'Set the current verified AVRORA PARTS URL in Catalog Sources before enabling.'),
-  ('K-Part', 'k-part', 'catalog_website', 'link_template', 'https://k-part.com/', true, 40,
-   true, '{"mode":"managed_link"}'::jsonb, false, NULL,
-   ARRAY['Komatsu'], 'May require subscription/login; never bypass access controls.')
+  (
+    'TehCat', 'tehcat', 'catalog_website', 'link_template',
+    'https://en.tehcat.ru/catalog/', true, 10, false,
+    jsonb_build_object(
+      'mode','managed_link',
+      'allows_download',false,
+      'manufacturer_scope',ARRAY['Komatsu','Caterpillar','Volvo CE','Hitachi','Hyundai','Doosan','Develon','Kobelco','JCB','CASE','Liebherr','SANY','XCMG'],
+      'notes','Approved heavy-equipment catalog source. Dedicated connector may be added when a stable permitted interface is available.'
+    ),
+    false, NULL,
+    ARRAY['Komatsu','Caterpillar','Volvo CE','Hitachi','Hyundai','Doosan','Develon','Kobelco','JCB','CASE','Liebherr','SANY','XCMG'],
+    'Approved heavy-equipment catalog source. Dedicated connector may be added when a stable permitted interface is available.'
+  ),
+  (
+    '777parts', '777parts', 'catalog_website', 'link_template',
+    'https://777parts.com/', true, 20, false,
+    jsonb_build_object(
+      'mode','managed_link',
+      'allows_download',false,
+      'manufacturer_scope',ARRAY['Komatsu'],
+      'notes','Heavy-equipment parts diagrams/catalog source.'
+    ),
+    false, NULL,
+    ARRAY['Komatsu'],
+    'Heavy-equipment parts diagrams/catalog source.'
+  ),
+  (
+    'AVRORA PARTS', 'avrora-parts', 'catalog_website', 'link_template',
+    NULL, false, 30, false,
+    jsonb_build_object(
+      'mode','managed_link',
+      'allows_download',false,
+      'manufacturer_scope',ARRAY['Komatsu','Caterpillar'],
+      'notes','Set the current verified AVRORA PARTS URL in Catalog Sources before enabling.'
+    ),
+    false, NULL,
+    ARRAY['Komatsu','Caterpillar'],
+    'Set the current verified AVRORA PARTS URL in Catalog Sources before enabling.'
+  ),
+  (
+    'K-Part', 'k-part', 'catalog_website', 'link_template',
+    'https://k-part.com/', true, 40, true,
+    jsonb_build_object(
+      'mode','managed_link',
+      'allows_download',false,
+      'manufacturer_scope',ARRAY['Komatsu'],
+      'notes','May require subscription/login; never bypass access controls.'
+    ),
+    false, NULL,
+    ARRAY['Komatsu'],
+    'May require subscription/login; never bypass access controls.'
+  )
 ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name,
   base_url = COALESCE(public.external_sources.base_url, EXCLUDED.base_url),
   manufacturer_scope = EXCLUDED.manufacturer_scope,
-  notes = COALESCE(public.external_sources.notes, EXCLUDED.notes);
+  notes = COALESCE(public.external_sources.notes, EXCLUDED.notes),
+  configuration = public.external_sources.configuration || EXCLUDED.configuration;
 
 CREATE TABLE IF NOT EXISTS public.machine_assets (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -75,6 +116,12 @@ CREATE TABLE IF NOT EXISTS public.asset_manuals (
 CREATE INDEX IF NOT EXISTS ix_asset_manuals_asset ON public.asset_manuals(machine_asset_id);
 CREATE INDEX IF NOT EXISTS ix_asset_manuals_checksum ON public.asset_manuals(checksum) WHERE checksum IS NOT NULL;
 
+-- SQL privileges are required in addition to RLS.
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.machine_assets TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.asset_manuals TO authenticated;
+GRANT ALL ON public.machine_assets TO service_role;
+GRANT ALL ON public.asset_manuals TO service_role;
+
 ALTER TABLE public.machine_assets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.asset_manuals ENABLE ROW LEVEL SECURITY;
 
@@ -93,5 +140,3 @@ DROP POLICY IF EXISTS "asset manuals managers write" ON public.asset_manuals;
 CREATE POLICY "asset manuals managers write" ON public.asset_manuals
 FOR ALL TO authenticated USING (public.can_manage_catalog(auth.uid()))
 WITH CHECK (public.can_manage_catalog(auth.uid()));
-
--- Existing source manager policy remains authoritative. Add manager-only field checks through RLS.
