@@ -15,11 +15,8 @@ const filtersSchema = z.object({
   sourceId: z.string().optional(),
 });
 
-/**
- * Online discovery. Runs entirely server-side so that source credentials never
- * reach the browser. Results are advisory only until a catalog manager imports
- * them.
- */
+/** Online discovery through dedicated server-side connectors only. Managed
+ * source links are intentionally skipped here and rendered separately in the UI. */
 export const searchOnline = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
@@ -38,6 +35,7 @@ export const searchOnline = createServerFn({ method: "POST" })
     const errors: { source: string; message: string }[] = [];
 
     for (const source of (sources ?? []) as ExternalSource[]) {
+      if (source.connector_key === "link_template") continue;
       const connector = getConnector(source);
       if (!connector) {
         errors.push({ source: source.name, message: "No connector registered." });
@@ -93,6 +91,14 @@ export const testSource = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!source) return { ok: false, message: "Source not found." };
+    if (source.connector_key === "link_template") {
+      return {
+        ok: Boolean(source.base_url),
+        message: source.base_url
+          ? "Managed source link is configured. Automated extraction requires a dedicated connector."
+          : "Set a source URL before enabling this managed source.",
+      };
+    }
 
     const connector = getConnector(source as ExternalSource);
     if (!connector) return { ok: false, message: "No connector registered for this source." };
@@ -122,6 +128,9 @@ export const previewOnlineImport = createServerFn({ method: "POST" })
       .eq("id", data.sourceId)
       .maybeSingle();
     if (!source) throw new Error("Source not found.");
+    if (source.connector_key === "link_template") {
+      throw new Error("Managed source links cannot be imported until a dedicated connector is configured.");
+    }
     const connector = getConnector(source as ExternalSource);
     if (!connector) throw new Error("No connector registered for this source.");
 
@@ -158,6 +167,9 @@ export const importOnlineResult = createServerFn({ method: "POST" })
       .eq("id", data.sourceId)
       .maybeSingle();
     if (!source) throw new Error("Source not found.");
+    if (source.connector_key === "link_template") {
+      throw new Error("Managed source links cannot be imported until a dedicated connector is configured.");
+    }
     const connector = getConnector(source as ExternalSource);
     if (!connector) throw new Error("No connector registered for this source.");
 
@@ -167,9 +179,6 @@ export const importOnlineResult = createServerFn({ method: "POST" })
     }
 
     const payload = connector.importMetadata(result);
-    // Atomic import: all domain writes happen in a single database
-    // transaction (public.import_external_payload). The import job row
-    // remains auditable even when the domain writes roll back.
     const { data: outcome, error: rpcError } = await supabase.rpc("import_external_payload", {
       p_payload: payload as never,
       p_source_id: data.sourceId,
