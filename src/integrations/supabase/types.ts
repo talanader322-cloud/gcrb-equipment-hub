@@ -127,6 +127,78 @@ export type Database = {
           },
         ]
       }
+      asset_manuals: {
+        Row: {
+          catalog_id: string | null
+          checksum: string | null
+          file_size: number | null
+          id: string
+          language: string | null
+          machine_asset_id: string
+          manual_type: string | null
+          original_filename: string | null
+          revision: string | null
+          serial_from: string | null
+          serial_to: string | null
+          source_type: string
+          storage_path: string | null
+          title: string | null
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          catalog_id?: string | null
+          checksum?: string | null
+          file_size?: number | null
+          id?: string
+          language?: string | null
+          machine_asset_id: string
+          manual_type?: string | null
+          original_filename?: string | null
+          revision?: string | null
+          serial_from?: string | null
+          serial_to?: string | null
+          source_type?: string
+          storage_path?: string | null
+          title?: string | null
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          catalog_id?: string | null
+          checksum?: string | null
+          file_size?: number | null
+          id?: string
+          language?: string | null
+          machine_asset_id?: string
+          manual_type?: string | null
+          original_filename?: string | null
+          revision?: string | null
+          serial_from?: string | null
+          serial_to?: string | null
+          source_type?: string
+          storage_path?: string | null
+          title?: string | null
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_manuals_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "catalogs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_manuals_machine_asset_id_fkey"
+            columns: ["machine_asset_id"]
+            isOneToOne: false
+            referencedRelation: "machine_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auth_login_attempts: {
         Row: {
           attempted_at: string
@@ -630,6 +702,7 @@ export type Database = {
       }
       external_sources: {
         Row: {
+          allows_download: boolean
           base_url: string | null
           configuration: Json
           connector_key: string
@@ -638,14 +711,18 @@ export type Database = {
           id: string
           last_error: string | null
           last_success_at: string | null
+          manufacturer_scope: string[]
           name: string
+          notes: string | null
           priority: number
           requires_authentication: boolean
+          search_url_template: string | null
           slug: string
           source_type: string
           updated_at: string
         }
         Insert: {
+          allows_download?: boolean
           base_url?: string | null
           configuration?: Json
           connector_key: string
@@ -654,14 +731,18 @@ export type Database = {
           id?: string
           last_error?: string | null
           last_success_at?: string | null
+          manufacturer_scope?: string[]
           name: string
+          notes?: string | null
           priority?: number
           requires_authentication?: boolean
+          search_url_template?: string | null
           slug: string
           source_type?: string
           updated_at?: string
         }
         Update: {
+          allows_download?: boolean
           base_url?: string | null
           configuration?: Json
           connector_key?: string
@@ -670,9 +751,12 @@ export type Database = {
           id?: string
           last_error?: string | null
           last_success_at?: string | null
+          manufacturer_scope?: string[]
           name?: string
+          notes?: string | null
           priority?: number
           requires_authentication?: boolean
+          search_url_template?: string | null
           slug?: string
           source_type?: string
           updated_at?: string
@@ -819,6 +903,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "machine_aliases_machine_model_id_fkey"
+            columns: ["machine_model_id"]
+            isOneToOne: false
+            referencedRelation: "machine_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      machine_assets: {
+        Row: {
+          asset_number: string | null
+          branch: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          machine_model_id: string | null
+          manufacture_year: number | null
+          notes: string | null
+          project: string | null
+          purchase_reference: string | null
+          serial_number: string
+          updated_at: string
+        }
+        Insert: {
+          asset_number?: string | null
+          branch?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          machine_model_id?: string | null
+          manufacture_year?: number | null
+          notes?: string | null
+          project?: string | null
+          purchase_reference?: string | null
+          serial_number: string
+          updated_at?: string
+        }
+        Update: {
+          asset_number?: string | null
+          branch?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          machine_model_id?: string | null
+          manufacture_year?: number | null
+          notes?: string | null
+          project?: string | null
+          purchase_reference?: string | null
+          serial_number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machine_assets_machine_model_id_fkey"
             columns: ["machine_model_id"]
             isOneToOne: false
             referencedRelation: "machine_models"
