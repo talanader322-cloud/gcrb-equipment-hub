@@ -91,7 +91,8 @@ async function idbPut(metadata: OfflineCatalogMetadata): Promise<void> {
     const transaction = database.transaction(STORE_NAME, "readwrite");
     transaction.objectStore(STORE_NAME).put(metadata);
     transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error ?? new Error("Offline metadata write failed."));
+    transaction.onerror = () =>
+      reject(transaction.error ?? new Error("Offline metadata write failed."));
   });
   database.close();
 }
@@ -100,7 +101,8 @@ async function idbGet(key: string): Promise<OfflineCatalogMetadata | null> {
   const database = await openDatabase();
   const result = await new Promise<OfflineCatalogMetadata | null>((resolve, reject) => {
     const request = database.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).get(key);
-    request.onsuccess = () => resolve((request.result as OfflineCatalogMetadata | undefined) ?? null);
+    request.onsuccess = () =>
+      resolve((request.result as OfflineCatalogMetadata | undefined) ?? null);
     request.onerror = () => reject(request.error ?? new Error("Offline metadata read failed."));
   });
   database.close();
@@ -124,7 +126,8 @@ async function idbDelete(key: string): Promise<void> {
     const transaction = database.transaction(STORE_NAME, "readwrite");
     transaction.objectStore(STORE_NAME).delete(key);
     transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error ?? new Error("Offline metadata delete failed."));
+    transaction.onerror = () =>
+      reject(transaction.error ?? new Error("Offline metadata delete failed."));
   });
   database.close();
 }
@@ -222,9 +225,11 @@ class BrowserOfflineCatalogStore implements OfflineCatalogStore {
   async findByCatalog(catalogId: string): Promise<OfflineCatalogMetadata | null> {
     if (!this.isSupported()) return null;
     const rows = await idbList();
-    return rows
-      .filter((row) => row.catalogId === catalogId)
-      .sort((a, b) => b.downloadedAt.localeCompare(a.downloadedAt))[0] ?? null;
+    return (
+      rows
+        .filter((row) => row.catalogId === catalogId)
+        .sort((a, b) => b.downloadedAt.localeCompare(a.downloadedAt))[0] ?? null
+    );
   }
 
   async list(): Promise<OfflineCatalogMetadata[]> {

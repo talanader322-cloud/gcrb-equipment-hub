@@ -172,7 +172,9 @@ function DownloadsPage() {
                 <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] text-muted-foreground">
                   <span>{formatBytes(row.size)}</span>
                   <span>{formatDate(row.downloadedAt)}</span>
-                  {row.checksum && <span>SHA-256 {row.checksum.replace("sha256:", "").slice(0, 16)}…</span>}
+                  {row.checksum && (
+                    <span>SHA-256 {row.checksum.replace("sha256:", "").slice(0, 16)}…</span>
+                  )}
                 </div>
               </div>
               <div className="flex gap-2">

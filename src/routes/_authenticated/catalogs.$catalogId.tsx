@@ -12,7 +12,7 @@ import {
   Upload,
   WifiOff,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,10 @@ export const Route = createFileRoute("/_authenticated/catalogs/$catalogId")({
   head: () => ({
     meta: [
       { title: "عرض الكتالوج | GCRB Equipment Catalog" },
-      { name: "description", content: "Interactive catalog viewer, sections, assemblies and offline file." },
+      {
+        name: "description",
+        content: "Interactive catalog viewer, sections, assemblies and offline file.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -204,10 +207,11 @@ function CatalogPage() {
     ? assemblies.filter((assembly) => assembly.section_id === selectedSection.id)
     : assemblies;
   const viewerBaseUrl = offlineUrl ?? cloudUrl;
-  const viewerUrl = useMemo(() => {
-    if (!viewerBaseUrl) return null;
-    return selectedSection?.page_from ? `${viewerBaseUrl}#page=${selectedSection.page_from}` : viewerBaseUrl;
-  }, [selectedSection?.page_from, viewerBaseUrl]);
+  const viewerUrl = !viewerBaseUrl
+    ? null
+    : selectedSection?.page_from
+      ? `${viewerBaseUrl}#page=${selectedSection.page_from}`
+      : viewerBaseUrl;
 
   return (
     <div className="space-y-4">
@@ -234,7 +238,11 @@ function CatalogPage() {
             {favorite.data ? t("action.unfavorite") : t("action.favorite")}
           </Button>
           {cloudUrl && primaryFile && user && !offlineMeta && (
-            <Button size="sm" onClick={() => offlineDownload.mutate()} disabled={offlineDownload.isPending}>
+            <Button
+              size="sm"
+              onClick={() => offlineDownload.mutate()}
+              disabled={offlineDownload.isPending}
+            >
               <HardDriveDownload className="me-2 size-4" />
               {downloadProgress === null
                 ? locale === "ar"
@@ -286,10 +294,14 @@ function CatalogPage() {
       {downloadProgress !== null && downloadProgress < 100 && (
         <div className="space-y-1">
           <div className="h-2 overflow-hidden rounded-full bg-muted">
-            <div className="h-full bg-primary transition-[width]" style={{ width: `${downloadProgress}%` }} />
+            <div
+              className="h-full bg-primary transition-[width]"
+              style={{ width: `${downloadProgress}%` }}
+            />
           </div>
           <p className="text-xs text-muted-foreground">
-            {locale === "ar" ? "جاري حفظ الكتالوج محليًا" : "Saving catalog locally"} · {downloadProgress}%
+            {locale === "ar" ? "جاري حفظ الكتالوج محليًا" : "Saving catalog locally"} ·{" "}
+            {downloadProgress}%
           </p>
         </div>
       )}
@@ -325,7 +337,9 @@ function CatalogPage() {
               >
                 <span className="min-w-0 text-xs">
                   {section.section_number && (
-                    <span className="me-2 font-mono text-muted-foreground">{section.section_number}</span>
+                    <span className="me-2 font-mono text-muted-foreground">
+                      {section.section_number}
+                    </span>
                   )}
                   {section.title}
                   {section.page_from && (
@@ -342,7 +356,9 @@ function CatalogPage() {
         <Card className="overflow-hidden">
           <CardHeader className="flex-row items-center justify-between space-y-0 p-3">
             <div>
-              <CardTitle className="text-sm">{selectedSection?.title ?? t("viewer.title")}</CardTitle>
+              <CardTitle className="text-sm">
+                {selectedSection?.title ?? t("viewer.title")}
+              </CardTitle>
               {selectedSection?.page_from && (
                 <p className="text-xs text-muted-foreground">
                   {t("viewer.page")} {selectedSection.page_from}
@@ -441,12 +457,17 @@ function CatalogPage() {
                 <>
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">{t("entity.file")}</span>
-                    <span className="max-w-[170px] truncate" title={primaryFile.original_filename ?? ""}>
+                    <span
+                      className="max-w-[170px] truncate"
+                      title={primaryFile.original_filename ?? ""}
+                    >
                       {primaryFile.original_filename ?? "PDF"}
                     </span>
                   </div>
                   <div className="flex justify-between gap-3">
-                    <span className="text-muted-foreground">{locale === "ar" ? "الحجم" : "Size"}</span>
+                    <span className="text-muted-foreground">
+                      {locale === "ar" ? "الحجم" : "Size"}
+                    </span>
                     <span>
                       {primaryFile.file_size
                         ? `${(Number(primaryFile.file_size) / 1024 / 1024).toFixed(1)} MB`
@@ -458,7 +479,9 @@ function CatalogPage() {
               {offlineMeta?.checksum && (
                 <div className="space-y-1 border-t pt-2">
                   <span className="text-muted-foreground">SHA-256</span>
-                  <p className="break-all font-mono text-[10px]">{offlineMeta.checksum.replace("sha256:", "")}</p>
+                  <p className="break-all font-mono text-[10px]">
+                    {offlineMeta.checksum.replace("sha256:", "")}
+                  </p>
                 </div>
               )}
             </CardContent>

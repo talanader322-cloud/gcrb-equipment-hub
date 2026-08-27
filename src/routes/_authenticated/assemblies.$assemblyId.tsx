@@ -117,7 +117,9 @@ function AssemblyPage() {
                 <ImageIcon className="size-10" />
                 <div>
                   <p className="text-sm font-medium">
-                    {locale === "ar" ? "لا توجد صورة رسم مرتبطة بعد" : "No diagram image attached yet"}
+                    {locale === "ar"
+                      ? "لا توجد صورة رسم مرتبطة بعد"
+                      : "No diagram image attached yet"}
                   </p>
                   <p className="mt-1 text-xs">
                     {locale === "ar"
@@ -130,7 +132,11 @@ function AssemblyPage() {
             {activeDiagram && (
               <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                 <span>{activeDiagram.title ?? row.title}</span>
-                {activeDiagram.page_number && <span>· {t("viewer.page")} {activeDiagram.page_number}</span>}
+                {activeDiagram.page_number && (
+                  <span>
+                    · {t("viewer.page")} {activeDiagram.page_number}
+                  </span>
+                )}
               </div>
             )}
           </CardContent>
@@ -145,7 +151,11 @@ function AssemblyPage() {
                 <Input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder={locale === "ar" ? "بحث برقم الموضع أو القطعة..." : "Search position or part number..."}
+                  placeholder={
+                    locale === "ar"
+                      ? "بحث برقم الموضع أو القطعة..."
+                      : "Search position or part number..."
+                  }
                   className="ps-8"
                 />
               </div>
@@ -168,7 +178,10 @@ function AssemblyPage() {
                       onClick={() => setSelectedPartId(item.id)}
                     >
                       <TableCell>
-                        <Badge variant={selectedPartId === item.id ? "default" : "outline"} className="font-mono">
+                        <Badge
+                          variant={selectedPartId === item.id ? "default" : "outline"}
+                          className="font-mono"
+                        >
                           {item.position_number ?? "—"}
                         </Badge>
                       </TableCell>
@@ -196,7 +209,9 @@ function AssemblyPage() {
               {selectedItem?.part ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <Badge className="font-mono text-base">{selectedItem.position_number ?? "—"}</Badge>
+                    <Badge className="font-mono text-base">
+                      {selectedItem.position_number ?? "—"}
+                    </Badge>
                     <span className="font-mono text-lg font-semibold">
                       {selectedItem.part.primary_part_number}
                     </span>
@@ -206,7 +221,10 @@ function AssemblyPage() {
                     <span className="text-muted-foreground">{t("entity.quantity")}</span>
                     <span className="font-mono">{selectedItem.quantity ?? "—"}</span>
                   </div>
-                  <ButtonLink partId={selectedItem.part.id} label={locale === "ar" ? "فتح بطاقة القطعة" : "Open part card"} />
+                  <ButtonLink
+                    partId={selectedItem.part.id}
+                    label={locale === "ar" ? "فتح بطاقة القطعة" : "Open part card"}
+                  />
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground">
