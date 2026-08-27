@@ -157,7 +157,7 @@ class BrowserOfflineCatalogStore implements OfflineCatalogStore {
     const declaredTotal = Number(response.headers.get("content-length") ?? "0");
     const total = Number.isFinite(declaredTotal) && declaredTotal > 0 ? declaredTotal : null;
     const mimeType = input.mimeType || response.headers.get("content-type") || "application/pdf";
-    const chunks: Uint8Array[] = [];
+    const chunks: ArrayBuffer[] = [];
     let loaded = 0;
 
     if (response.body) {
@@ -166,7 +166,9 @@ class BrowserOfflineCatalogStore implements OfflineCatalogStore {
         const { done, value } = await reader.read();
         if (done) break;
         if (value) {
-          chunks.push(value);
+          const copy = new Uint8Array(value.byteLength);
+          copy.set(value);
+          chunks.push(copy.buffer);
           loaded += value.byteLength;
           const percent = total ? Math.min(99, Math.round((loaded / total) * 100)) : 0;
           onProgress?.({ loaded, total, percent });
@@ -174,9 +176,8 @@ class BrowserOfflineCatalogStore implements OfflineCatalogStore {
       }
     } else {
       const arrayBuffer = await response.arrayBuffer();
-      const chunk = new Uint8Array(arrayBuffer);
-      chunks.push(chunk);
-      loaded = chunk.byteLength;
+      chunks.push(arrayBuffer);
+      loaded = arrayBuffer.byteLength;
     }
 
     const blob = new Blob(chunks, { type: mimeType });
