@@ -150,7 +150,9 @@ function AssetsPage() {
               value: String(item),
               label: String(item),
             }))}
-            onChange={(value) => navigate({ to: ".", search: (prev) => ({ ...prev, year: value }) })}
+            onChange={(value) =>
+              navigate({ to: ".", search: (prev) => ({ ...prev, year: value }) })
+            }
           />
         </CardContent>
       </Card>
@@ -244,10 +246,7 @@ function FilterSelect({
   onChange: (value: string) => void;
 }) {
   return (
-    <Select
-      value={value || "any"}
-      onValueChange={(next) => onChange(next === "any" ? "" : next)}
-    >
+    <Select value={value || "any"} onValueChange={(next) => onChange(next === "any" ? "" : next)}>
       <SelectTrigger className="w-[190px]">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

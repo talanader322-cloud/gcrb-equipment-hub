@@ -117,7 +117,6 @@ export const assetRepository = {
     };
   },
 
-
   /** Assets whose model matches the given machine model. */
   async listAssetsByModel(machineModelId: string) {
     const { data, error } = await supabase
@@ -155,7 +154,10 @@ export const assetRepository = {
     if (error) throw new Error(error.message);
     const branches = new Set<string>();
     const years = new Set<number>();
-    for (const row of (data ?? []) as { branch: string | null; manufacture_year: number | null }[]) {
+    for (const row of (data ?? []) as {
+      branch: string | null;
+      manufacture_year: number | null;
+    }[]) {
       if (row.branch) branches.add(row.branch);
       if (row.manufacture_year) years.add(row.manufacture_year);
     }
