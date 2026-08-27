@@ -149,8 +149,13 @@ export class KPartPublicConnector implements SourceConnector {
     let serialTo: string | null = null;
     if (serial) {
       const normalized = serial.replace(/\s+/g, "");
-      if (/^\d+-UP$/i.test(normalized)) serialFrom = normalized.split("-")[0] ?? null;
-      else if (/^\d+-\d+$/.test(normalized)) [serialFrom, serialTo] = normalized.split("-");
+      if (/^\d+-UP$/i.test(normalized)) {
+        serialFrom = normalized.split("-")[0] ?? null;
+      } else if (/^\d+-\d+$/.test(normalized)) {
+        const pieces = normalized.split("-");
+        serialFrom = pieces[0] ?? null;
+        serialTo = pieces[1] ?? null;
+      }
     }
     return {
       manufacturerName: "Komatsu",
