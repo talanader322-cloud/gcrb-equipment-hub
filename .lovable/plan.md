@@ -40,7 +40,7 @@ Nothing else in the schema is touched.
 - Asset photo upload (managers only) writing `machine_assets.image_url`.
 
 ### B. Unify original manuals with the catalog system
-- Rework the upload flow in `NewEquipmentPanel` (and add the same on the asset page) so each uploaded PDF creates, in one transaction: `catalogs` row (manufacturer, model, catalog_type from a selector, language, revision, serial applicability) → `catalog_files` row in the private `catalogs` bucket → `asset_manuals` row referencing that `catalog_id`.
+- Rework the upload flow in `NewEquipmentPanel` (and add the same on the asset page) so each uploaded PDF runs the orchestrated transaction above: validate → upload to the private `catalogs` bucket → atomic RPC creating the `catalogs` row (manufacturer, model, catalog_type selector, title, language, revision, serial applicability) + `catalog_files` row + `asset_manuals` row → cleanup of the storage object if the RPC fails.
 - `asset_manuals` becomes purely the asset↔catalog association plus asset-scoped metadata (manual_type, serial_from/to, source_type = `original_cd`).
 - Result: CD manuals, admin uploads, and permitted external downloads all open in the same Catalog Viewer and use the same OfflineCatalogStore. No second viewer, no second storage path.
 
