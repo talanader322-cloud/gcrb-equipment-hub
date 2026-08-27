@@ -1,0 +1,42 @@
+name: Format Phase 2 Once
+
+on:
+  push:
+    branches:
+      - phase2-catalog-sources-downloads
+    paths:
+      - .github/workflows/format-phase2-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase2-catalog-sources-downloads
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Format Phase 2 files
+        run: |
+          bunx prettier --write \
+            src/components/NewEquipmentPanel.tsx \
+            src/routes/_authenticated/equipment.tsx \
+            src/routes/_authenticated/sources.tsx \
+            src/routes/_authenticated/search.tsx \
+            src/lib/online.functions.ts \
+            src/services/connectors/demoConnector.ts \
+            src/hooks/useSession.ts \
+            eslint.config.js
+      - name: Commit formatting
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Format Phase 2 files"
+          git push origin HEAD:phase2-catalog-sources-downloads
