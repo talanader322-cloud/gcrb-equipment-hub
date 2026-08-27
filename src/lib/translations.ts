@@ -361,6 +361,21 @@ export const en = {
   "assets.pdfOnly": "This version accepts PDF files only.",
   "assets.invalidPdf": "The selected file is not a valid PDF.",
   "assets.imageOnly": "Please choose an image file (JPG or PNG).",
+  "assets.selectPdfs": "Select one or more PDF files",
+  "assets.manualTitle": "Manual title",
+  "assets.manualType": "Manual type",
+  "assets.language": "Language",
+  "assets.revision": "Revision",
+  "assets.catalogNumber": "Catalog number",
+  "assets.serialFrom": "Serial from",
+  "assets.serialTo": "Serial to",
+  "assets.uploading": "Saving",
+  "assets.saveManuals": "Save manuals to the institution library",
+  "catalogType.maintenance_manual": "Maintenance Manual",
+  "catalogType.transmission_manual": "Transmission Manual",
+  "catalogType.electrical_diagram": "Electrical Diagram",
+  "catalogType.hydraulic_diagram": "Hydraulic Diagram",
+  "catalogType.specification_manual": "Specification Manual",
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -705,6 +720,21 @@ export const ar: Record<TranslationKey, string> = {
   "assets.pdfOnly": "الإصدار الحالي يقبل ملفات PDF فقط.",
   "assets.invalidPdf": "الملف المختار ليس ملف PDF صالحاً.",
   "assets.imageOnly": "الرجاء اختيار ملف صورة (JPG أو PNG).",
+  "assets.selectPdfs": "اختر ملف أو عدة ملفات PDF",
+  "assets.manualTitle": "عنوان الدليل",
+  "assets.manualType": "نوع الدليل",
+  "assets.language": "اللغة",
+  "assets.revision": "المراجعة",
+  "assets.catalogNumber": "رقم الكتالوج",
+  "assets.serialFrom": "من رقم تسلسل",
+  "assets.serialTo": "إلى رقم تسلسل",
+  "assets.uploading": "جاري الحفظ",
+  "assets.saveManuals": "حفظ الكتالوجات في مكتبة المؤسسة",
+  "catalogType.maintenance_manual": "دليل الصيانة الدورية",
+  "catalogType.transmission_manual": "دليل نقل الحركة",
+  "catalogType.electrical_diagram": "مخطط كهربائي",
+  "catalogType.hydraulic_diagram": "مخطط هيدروليكي",
+  "catalogType.specification_manual": "دليل المواصفات",
 };
 
 export const dictionary = { en, ar } as {

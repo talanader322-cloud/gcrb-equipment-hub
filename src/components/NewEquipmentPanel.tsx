@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { FileUp, Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { ManualDraftList } from "@/components/assets/ManualDraftList";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,52 +16,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAccess, useSession } from "@/hooks/useSession";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import { type ManualDraft, uploadAssetManuals } from "@/services/assets/manualUploadService";
+import { assetRepository } from "@/services/repositories/assetRepository";
 import { catalogRepository } from "@/services/repositories/catalogRepository";
 
-const MANUAL_TYPES = [
-  "parts_catalog",
-  "operation_manual",
-  "service_manual",
-  "workshop_manual",
-  "maintenance_manual",
-  "engine_manual",
-  "transmission_manual",
-  "electrical_diagram",
-  "hydraulic_diagram",
-  "specification_manual",
-  "other",
-] as const;
-
-type ManualType = (typeof MANUAL_TYPES)[number];
-type PendingManual = { id: string; file: File; type: ManualType; title: string };
-type AssetRow = { id: string };
-
-function inferManualType(name: string): ManualType {
-  const value = name.toLowerCase();
-  if (value.includes("part")) return "parts_catalog";
-  if (value.includes("operation") || value.includes("operator")) return "operation_manual";
-  if (value.includes("workshop")) return "workshop_manual";
-  if (value.includes("service")) return "service_manual";
-  if (value.includes("maint")) return "maintenance_manual";
-  if (value.includes("engine")) return "engine_manual";
-  if (value.includes("transmission")) return "transmission_manual";
-  if (value.includes("electric") || value.includes("wiring")) return "electrical_diagram";
-  if (value.includes("hydraulic")) return "hydraulic_diagram";
-  if (value.includes("spec")) return "specification_manual";
-  return "other";
-}
-
-async function sha256(file: File): Promise<string> {
-  const hash = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
-  return Array.from(new Uint8Array(hash))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 export function NewEquipmentPanel({ onSaved }: { onSaved?: () => void }) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const { user } = useSession();
   const access = useAccess(user?.id);
   const canManage = Boolean(access.data?.canManageCatalog);
@@ -79,7 +41,7 @@ export function NewEquipmentPanel({ onSaved }: { onSaved?: () => void }) {
     purchaseReference: "",
     notes: "",
   });
-  const [manuals, setManuals] = useState<PendingManual[]>([]);
+  const [manuals, setManuals] = useState<ManualDraft[]>([]);
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -92,64 +54,27 @@ export function NewEquipmentPanel({ onSaved }: { onSaved?: () => void }) {
 
   async function save() {
     if (!user?.id || !form.machineModelId || !form.serialNumber.trim()) return;
-    if (manuals.some((manual) => manual.file.type && manual.file.type !== "application/pdf")) {
-      toast.error(
-        locale === "ar"
-          ? "الإصدار الحالي يقبل ملفات PDF فقط."
-          : "This version accepts PDF files only.",
-      );
-      return;
-    }
 
     setSaving(true);
     setProgress(0);
     try {
-      const { data: assetData, error: assetError } = await supabase
-        .from("machine_assets" as never)
-        .insert({
-          machine_model_id: form.machineModelId,
-          serial_number: form.serialNumber.trim(),
-          asset_number: form.assetNumber.trim() || null,
-          manufacture_year: form.manufactureYear ? Number(form.manufactureYear) : null,
-          branch: form.branch.trim() || null,
-          project: form.project.trim() || null,
-          purchase_reference: form.purchaseReference.trim() || null,
-          notes: form.notes.trim() || null,
-          created_by: user.id,
-        } as never)
-        .select("id")
-        .single();
-      if (assetError) throw new Error(assetError.message);
-      const asset = assetData as unknown as AssetRow;
+      const assetId = await assetRepository.createAsset({
+        machine_model_id: form.machineModelId,
+        serial_number: form.serialNumber.trim(),
+        asset_number: form.assetNumber.trim() || null,
+        manufacture_year: form.manufactureYear ? Number(form.manufactureYear) : null,
+        branch: form.branch.trim() || null,
+        project: form.project.trim() || null,
+        purchase_reference: form.purchaseReference.trim() || null,
+        notes: form.notes.trim() || null,
+        created_by: user.id,
+      });
 
-      for (let index = 0; index < manuals.length; index += 1) {
-        const manual = manuals[index]!;
-        const checksum = await sha256(manual.file);
-        const safeName = manual.file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
-        const storagePath = `assets/${asset.id}/${crypto.randomUUID()}-${safeName}`;
-        const { error: uploadError } = await supabase.storage
-          .from("catalogs")
-          .upload(storagePath, manual.file, { contentType: "application/pdf", upsert: false });
-        if (uploadError) throw new Error(uploadError.message);
-
-        const { error: manualError } = await supabase.from("asset_manuals" as never).insert({
-          machine_asset_id: asset.id,
-          manual_type: manual.type,
-          title: manual.title.trim() || manual.file.name,
-          original_filename: manual.file.name,
-          storage_path: storagePath,
-          file_size: manual.file.size,
-          checksum,
-          language: "en",
-          source_type: "original_equipment_manual",
-          uploaded_by: user.id,
-        } as never);
-        if (manualError) {
-          await supabase.storage.from("catalogs").remove([storagePath]);
-          throw new Error(manualError.message);
-        }
-        setProgress(Math.round(((index + 1) / Math.max(manuals.length, 1)) * 100));
-      }
+      // Unified original-manual pipeline: validate -> SHA-256 -> private upload
+      // -> atomic catalogs/catalog_files/asset_manuals RPC -> cleanup on failure.
+      await uploadAssetManuals(assetId, manuals, (done, total) =>
+        setProgress(Math.round((done / Math.max(total, 1)) * 100)),
+      );
 
       toast.success(
         locale === "ar" ? "تمت إضافة المعدة وحفظ كتالوجاتها." : "Equipment and manuals saved.",
@@ -167,7 +92,7 @@ export function NewEquipmentPanel({ onSaved }: { onSaved?: () => void }) {
       setManuals([]);
       onSaved?.();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unknown error");
+      toast.error(error instanceof Error ? error.message : t("state.error"));
     } finally {
       setSaving(false);
     }
@@ -262,80 +187,7 @@ export function NewEquipmentPanel({ onSaved }: { onSaved?: () => void }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-sm hover:bg-muted/40">
-            <FileUp className="size-5" />
-            {locale === "ar" ? "اختر عدة ملفات PDF دفعة واحدة" : "Select multiple PDF files"}
-            <input
-              className="hidden"
-              type="file"
-              accept="application/pdf,.pdf"
-              multiple
-              onChange={(event) => {
-                const files = Array.from(event.target.files ?? []);
-                setManuals((current) => [
-                  ...current,
-                  ...files.map((file) => ({
-                    id: crypto.randomUUID(),
-                    file,
-                    type: inferManualType(file.name),
-                    title: file.name.replace(/\.pdf$/i, ""),
-                  })),
-                ]);
-                event.currentTarget.value = "";
-              }}
-            />
-          </label>
-
-          {manuals.map((manual) => (
-            <div
-              key={manual.id}
-              className="grid items-center gap-2 rounded-md border p-3 md:grid-cols-[1fr_220px_auto]"
-            >
-              <div>
-                <Input
-                  value={manual.title}
-                  onChange={(e) =>
-                    setManuals((items) =>
-                      items.map((item) =>
-                        item.id === manual.id ? { ...item, title: e.target.value } : item,
-                      ),
-                    )
-                  }
-                />
-                <p className="mt-1 text-xs text-muted-foreground" dir="ltr">
-                  {manual.file.name} — {(manual.file.size / 1024 / 1024).toFixed(2)} MB
-                </p>
-              </div>
-              <Select
-                value={manual.type}
-                onValueChange={(value) =>
-                  setManuals((items) =>
-                    items.map((item) =>
-                      item.id === manual.id ? { ...item, type: value as ManualType } : item,
-                    ),
-                  )
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MANUAL_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setManuals((items) => items.filter((item) => item.id !== manual.id))}
-              >
-                <X className="size-4" />
-              </Button>
-            </div>
-          ))}
+          <ManualDraftList drafts={manuals} onChange={setManuals} />
 
           {saving && (
             <div className="text-sm text-muted-foreground">

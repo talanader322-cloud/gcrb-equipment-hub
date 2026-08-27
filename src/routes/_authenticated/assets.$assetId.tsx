@@ -4,6 +4,7 @@ import { BookOpen, Camera, FileStack, HardDriveDownload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { AssetManualUploadPanel } from "@/components/assets/AssetManualUploadPanel";
 import { AssetPhoto } from "@/components/assets/AssetPhoto";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -212,6 +213,8 @@ function AssetDetailPage() {
           ))}
         </CardContent>
       </Card>
+
+      {canManage && <AssetManualUploadPanel assetId={assetId} />}
 
       <Card>
         <CardHeader>
