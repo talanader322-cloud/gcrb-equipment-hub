@@ -2,6 +2,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Boxes,
+  HardHat,
   ChevronsLeft,
   ChevronsRight,
   Clock,
@@ -41,6 +42,7 @@ const CATALOG_NAV: NavItem[] = [
   { to: "/search", labelKey: "nav.search", icon: Search },
   { to: "/manufacturers", labelKey: "nav.manufacturers", icon: Factory },
   { to: "/equipment", labelKey: "nav.equipment", icon: Boxes },
+  { to: "/assets", labelKey: "nav.assets", icon: HardHat },
   { to: "/catalogs", labelKey: "nav.catalogs", icon: FileStack },
   { to: "/parts", labelKey: "nav.parts", icon: Wrench },
 ];

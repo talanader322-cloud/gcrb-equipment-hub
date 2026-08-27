@@ -129,7 +129,7 @@ export type Database = {
       }
       asset_manuals: {
         Row: {
-          catalog_id: string | null
+          catalog_id: string
           checksum: string | null
           file_size: number | null
           id: string
@@ -147,7 +147,7 @@ export type Database = {
           uploaded_by: string | null
         }
         Insert: {
-          catalog_id?: string | null
+          catalog_id: string
           checksum?: string | null
           file_size?: number | null
           id?: string
@@ -165,7 +165,7 @@ export type Database = {
           uploaded_by?: string | null
         }
         Update: {
-          catalog_id?: string | null
+          catalog_id?: string
           checksum?: string | null
           file_size?: number | null
           id?: string
@@ -917,6 +917,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          image_url: string | null
           machine_model_id: string | null
           manufacture_year: number | null
           notes: string | null
@@ -931,6 +932,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          image_url?: string | null
           machine_model_id?: string | null
           manufacture_year?: number | null
           notes?: string | null
@@ -945,6 +947,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          image_url?: string | null
           machine_model_id?: string | null
           manufacture_year?: number | null
           notes?: string | null
