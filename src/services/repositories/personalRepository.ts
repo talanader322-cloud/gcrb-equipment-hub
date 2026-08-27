@@ -99,17 +99,64 @@ export const personalRepository = {
     return (data ?? []) as (DownloadRecord & { catalog: { id: string; title: string } | null })[];
   },
 
-  async recordDownload(userId: string, catalogId: string): Promise<void> {
-    const { error } = await supabase.from("download_records").upsert(
-      {
-        user_id: userId,
-        catalog_id: catalogId,
-        status: "completed",
-        progress: 100,
+  async beginDownload(userId: string, catalogId: string): Promise<DownloadRecord> {
+    const existing = await supabase
+      .from("download_records")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("catalog_id", catalogId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existing.error) throw new Error(existing.error.message);
+
+    if (existing.data) {
+      const { data, error } = await supabase
+        .from("download_records")
+        .update({
+          status: "downloading",
+          progress: 0,
+          local_reference: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.data.id)
+        .select("*")
+        .single();
+      if (error) throw new Error(error.message);
+      return data;
+    }
+
+    const { data, error } = await supabase
+      .from("download_records")
+      .insert({ user_id: userId, catalog_id: catalogId, status: "downloading", progress: 0 })
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async updateDownload(
+    id: string,
+    patch: { status?: string; progress?: number; local_reference?: string | null },
+  ): Promise<void> {
+    const { error } = await supabase
+      .from("download_records")
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+  },
+
+  async clearOfflineReference(userId: string, catalogId: string): Promise<void> {
+    const { error } = await supabase
+      .from("download_records")
+      .update({
+        status: "removed",
+        progress: 0,
+        local_reference: null,
         updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id" },
-    );
+      })
+      .eq("user_id", userId)
+      .eq("catalog_id", catalogId);
     if (error) throw new Error(error.message);
   },
 };
