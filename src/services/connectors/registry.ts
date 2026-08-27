@@ -8,6 +8,7 @@ import {
   PublicCatalogConnector,
 } from "./baseConnectors";
 import { DemoConnector } from "./demoConnector";
+import { KPartPublicConnector } from "./kPartConnector";
 import type { SourceConnector } from "./types";
 
 type Factory = (source: ExternalSource) => SourceConnector;
@@ -23,6 +24,7 @@ const factories: Record<string, Factory> = {
   authorized_feed: (source) => new AuthorizedFeedConnector({ source }),
   manual_url: (source) => new ManualURLConnector({ source }),
   pdf_source: (source) => new PDFSourceConnector({ source }),
+  k_part_public: (source) => new KPartPublicConnector({ source }),
 };
 
 export function getConnector(source: ExternalSource): SourceConnector | null {
