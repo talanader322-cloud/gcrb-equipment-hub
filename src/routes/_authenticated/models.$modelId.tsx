@@ -191,7 +191,12 @@ function ModelPage() {
               {locale === "ar" ? "معدات المؤسسة من هذا الموديل" : "Institution Assets for This Model"}
             </CardTitle>
             <Button asChild size="sm" variant="outline">
-              <Link to="/assets">{locale === "ar" ? "معدات المؤسسة" : "Institution Equipment"}</Link>
+              <Link
+                to="/assets"
+                search={{ manufacturerId: "", equipmentTypeId: "", branch: "", year: "", q: "" }}
+              >
+                {locale === "ar" ? "معدات المؤسسة" : "Institution Equipment"}
+              </Link>
             </Button>
           </div>
         </CardHeader>
