@@ -1,55 +1,38 @@
-# Phase 2 + Phase 3 deployment
+# Phase 2 database migration only
 
-## What I verified first (real reads, no changes made)
+Scope: one idempotent migration against the already-verified live production database, plus real verification queries. No application code is written, no Phase 2/Phase 3 files are recreated, no branches are merged.
 
-Database (the project's live production database, project ref ending `...jziq`):
+## Verified current state (read before planning)
 
-- Present: `manufacturers`, `equipment_types`, `machine_models`, `catalogs`, `catalog_files`, `external_sources`, `download_records`, `profiles`, `user_roles`, `can_manage_catalog(...)`, and the private `catalogs` storage bucket. Correct project — safe to proceed.
-- Missing (Phase 2 not applied yet): `machine_assets`, `asset_manuals`, and the `external_sources` columns `allows_download`, `search_url_template`, `manufacturer_scope`, `notes`.
-- `external_sources` currently holds exactly one row: the Demo connector, still enabled. TehCat, 777parts, AVRORA PARTS, K-Part are absent.
+- Core objects present: `manufacturers`, `equipment_types`, `machine_models`, `catalogs`, `catalog_files`, `external_sources`, `download_records`, `profiles`, `user_roles`, `can_manage_catalog(...)`, private `catalogs` bucket. Correct project.
+- Missing: `machine_assets`, `asset_manuals`, and `external_sources` columns `allows_download`, `search_url_template`, `manufacturer_scope`, `notes`.
+- `external_sources` holds one row only: the Demo connector, currently `enabled = true`. TehCat, 777parts, AVRORA PARTS, K-Part absent.
 - All five storage buckets are private.
 
-Code:
+## Migration contents
 
-- `supabase/migrations/20260827020000_phase2_catalog_sources_assets.sql` does not exist in this workspace, and no Phase 3 code (offline store, checksum, Cache Storage / IndexedDB) exists. The current viewer, downloads page and equipment page are the earlier basic versions.
+1. `ALTER TABLE public.external_sources` — `ADD COLUMN IF NOT EXISTS allows_download boolean NOT NULL DEFAULT false`, `search_url_template text`, `manufacturer_scope text[] NOT NULL DEFAULT '{}'`, `notes text`.
+2. Disable demo: `UPDATE public.external_sources SET enabled = false WHERE connector_key = 'demo'`.
+3. Upsert the four approved heavy-equipment sources on `slug` (existing rows are updated, never duplicated; no agricultural sources):
+   - TehCat — `https://en.tehcat.ru/catalog/`, `connector_key = 'link_template'`, enabled, `allows_download = false`
+   - 777parts — `https://777parts.com/`, `link_template`, enabled, `allows_download = false`
+   - AVRORA PARTS — `link_template`, **disabled**, no base URL until a Catalog Manager configures a verified one, `allows_download = false`
+   - K-Part — `https://k-part.com/`, `connector_key = 'k_part_public'`, enabled, `allows_download = false`, notes recording public-metadata-only usage
+4. `CREATE TABLE IF NOT EXISTS public.machine_assets` with exactly the requested fields (`machine_model_id` referencing `machine_models`, `serial_number NOT NULL`, `asset_number`, `manufacture_year`, `branch`, `project`, `purchase_reference`, `notes`, `created_by`, `created_at`, `updated_at`), plus indexes on `machine_model_id`, on `serial_number`, and a partial unique index on `asset_number WHERE asset_number IS NOT NULL`. `updated_at` trigger uses the existing `set_updated_at()`.
+5. `CREATE TABLE IF NOT EXISTS public.asset_manuals` with the requested fields (`machine_asset_id` referencing `machine_assets`, nullable `catalog_id` referencing `catalogs`, `manual_type`, `title`, `original_filename`, unique `storage_path`, `file_size`, `checksum`, `language`, `revision`, `serial_from`, `serial_to`, `source_type` defaulting to `original_equipment_manual`, `uploaded_by`, `uploaded_at`), plus indexes on `machine_asset_id` and on `checksum WHERE checksum IS NOT NULL`.
+6. Grants and RLS for both new tables: `GRANT SELECT, INSERT, UPDATE, DELETE ... TO authenticated`, `GRANT ALL ... TO service_role`, `ENABLE ROW LEVEL SECURITY`, one read policy for `authenticated`, and insert/update/delete policies gated on `public.can_manage_catalog(auth.uid())`. Existing policies elsewhere are untouched.
+7. No `storage.buckets` insert or update; the private `catalogs` bucket is reused as-is.
 
-## Honest limitation on Steps 4-7
+Policies and index creation are written to be re-runnable (drop-if-exists then create, `IF NOT EXISTS` where supported), so a later merge of the PR's own migration file cannot conflict destructively.
 
-This environment has no GitHub access (no credentials, no `gh`), so I cannot fetch PR #4's head, review its diff, run CI on GitHub, merge it into `main`, or report a merge commit SHA. Those steps must be done by you in GitHub, or I do the equivalent work here in Lovable (which pushes to the repo through Lovable's own sync).
+## Verification (real queries after apply)
 
-Proposed path: I build Phase 2 + Phase 3 in this project, verify them against the live database and in the running app, and you then merge/close PR #4 as appropriate. I will not report merge, CI, or SHA results I did not execute.
+All sixteen checks: both tables exist; the four `external_sources` columns exist; demo `enabled = false`; each of the four sources present with the intended enabled/allows_download values; `pg_class.relrowsecurity` true for both new tables; `storage.buckets.public = false` for `catalogs`; the policy set proves manager-only writes while any authenticated user can read, and a role-simulated write attempt as a non-manager authenticated user is rejected.
 
-## Phase 2 — database
+## Note on the connector keys
 
-One idempotent migration (submitted for your approval):
+`link_template` and `k_part_public` are not yet in the application's connector registry — that code lives in PR #4. Until that merges, those rows are inert configuration in the database, which is the intended sequencing. I will not add registry code here.
 
-- `ALTER TABLE public.external_sources ADD COLUMN IF NOT EXISTS allows_download boolean NOT NULL DEFAULT false`, `search_url_template text`, `manufacturer_scope text[]`, `notes text`.
-- `UPDATE public.external_sources SET enabled = false WHERE connector_key = 'demo'`.
-- Insert-or-update (on conflict on `slug`) the four approved heavy-equipment sources: TehCat, 777parts, AVRORA PARTS, K-Part — each with source type, connector key, base URL, search URL template, manufacturer scope, download allowance and notes. No agricultural sources.
-- `CREATE TABLE IF NOT EXISTS public.machine_assets` (machine model reference, serial number, asset tag, location, status, notes, timestamps) and `public.asset_manuals` (asset reference, catalog/file reference, title, language, sort order, timestamps), each with: indexes, `GRANT SELECT/INSERT/UPDATE/DELETE` to `authenticated` and `GRANT ALL` to `service_role`, RLS enabled, read policy for any authenticated user, and write policies gated on `can_manage_catalog(auth.uid())`.
-- No writes to `storage.buckets`; the existing private `catalogs` bucket is reused.
+## Report
 
-Then verification by query: both tables exist, the four columns exist, demo disabled, four sources present, buckets still private, RLS enabled on both new tables, and policy checks confirming manager-only writes.
-
-## Phase 2 — application
-
-- Catalog Sources screen (`/sources`) extended for admins/catalog managers: edit enable state, priority, download allowance, search URL template, manufacturer scope and notes; demo source labelled non-production.
-- New `k_part` public connector registered in the connector registry (public metadata only, no paywall/CAPTCHA/login bypass); TehCat / 777parts / AVRORA PARTS registered as managed link-out sources whose results carry an external URL instead of scraped content.
-- Equipment page gains "إضافة معدة جديدة وكتالوجاتها": create a machine model + machine asset with serial number, then upload one or more PDF manuals in a single flow into the private `catalogs` bucket, creating `catalog_files`, `catalogs` and `asset_manuals` rows.
-
-## Phase 3 — viewer, assemblies, offline
-
-- Catalog viewer rebuilt: PDF pane with page jump input, sections navigation panel (tree from `catalog_sections`), and an assemblies workspace listing assemblies, their parts (position / quantity / supersession) and diagram with hotspot links into part details.
-- `OfflineCatalogStore` abstraction (web implementation now, Tauri + SQLite implementation later): streams the signed PDF with progress, computes a SHA-256 checksum via WebCrypto, stores the blob in browser Cache Storage and its metadata (catalog id, size, checksum, timestamp) in IndexedDB, and exposes list / open / remove.
-- Downloads manager page: per-catalog progress bar to 100%, recorded checksum, "متاح بدون إنترنت" status, open-offline-copy and remove actions, kept in sync with `download_records`.
-- Arabic RTL and English LTR strings added for every new label.
-
-## Verification I will actually run
-
-- Database queries for all ten Step 3 checks plus a policy check that a plain authenticated user cannot write to the new tables.
-- `bun run typecheck`, `bun run lint`, `bun run build` in this workspace — no ESLint rule loosening, no `any`/ignore escapes.
-- Browser run signed in as `admin2`: Komatsu / D155A-1 search shows no synthetic demo result; create model + asset with serial; upload a PDF; open viewer; check sections and assemblies panels; download offline to 100%; confirm checksum and "متاح بدون إنترنت"; open offline copy; see it in Downloads; remove it and confirm state resets. Existing username/password login re-checked.
-
-## Final report
-
-Migration status, all database verification results, local typecheck/lint/build results, functional test results — and an explicit statement that PR #4 review, GitHub CI and the merge to `main` were not performed here, with what you need to do.
+Migration applied YES/NO, then PASS/FAIL for each of the listed checks, based only on executed queries.
