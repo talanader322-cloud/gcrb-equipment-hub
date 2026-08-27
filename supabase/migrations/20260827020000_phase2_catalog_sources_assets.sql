@@ -9,8 +9,9 @@ ALTER TABLE public.external_sources
 -- Demo must never be enabled for production discovery.
 UPDATE public.external_sources SET enabled = false WHERE connector_key = 'demo';
 
--- Seed approved heavy-equipment source registry. These are managed links until
--- a dedicated permitted connector is implemented for the individual source.
+-- Seed approved heavy-equipment source registry. Managed-link sources never
+-- fabricate results. K-Part uses a dedicated public-metadata connector that
+-- does not bypass subscription/login requirements.
 INSERT INTO public.external_sources
   (name, slug, source_type, connector_key, base_url, enabled, priority,
    requires_authentication, configuration, allows_download, search_url_template,
@@ -56,20 +57,22 @@ VALUES
     'Set the current verified AVRORA PARTS URL in Catalog Sources before enabling.'
   ),
   (
-    'K-Part', 'k-part', 'catalog_website', 'link_template',
+    'K-Part', 'k-part', 'public_catalog', 'k_part_public',
     'https://k-part.com/', true, 40, true,
     jsonb_build_object(
-      'mode','managed_link',
+      'mode','verified_public_metadata',
       'allows_download',false,
       'manufacturer_scope',ARRAY['Komatsu'],
-      'notes','May require subscription/login; never bypass access controls.'
+      'notes','Public model metadata connector. Full interactive materials may require subscription; no access controls are bypassed.'
     ),
     false, NULL,
     ARRAY['Komatsu'],
-    'May require subscription/login; never bypass access controls.'
+    'Public model metadata connector. Full interactive materials may require subscription; no access controls are bypassed.'
   )
 ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name,
+  source_type = EXCLUDED.source_type,
+  connector_key = EXCLUDED.connector_key,
   base_url = COALESCE(public.external_sources.base_url, EXCLUDED.base_url),
   manufacturer_scope = EXCLUDED.manufacturer_scope,
   notes = COALESCE(public.external_sources.notes, EXCLUDED.notes),
