@@ -1,12 +1,7 @@
 import { normalizeCode } from "@/lib/normalize";
 import type { OnlineResult, SearchFilters } from "@/lib/types";
 
-import type {
-  CatalogMetadata,
-  ConnectorContext,
-  ImportPayload,
-  SourceConnector,
-} from "./types";
+import type { CatalogMetadata, ConnectorContext, ImportPayload, SourceConnector } from "./types";
 
 function modelFromQuery(query: string): string | null {
   const cleaned = query
@@ -38,7 +33,10 @@ function stripHtml(value: string): string {
 function extractSerialRange(text: string, model: string): string | null {
   const escaped = model.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const afterModel = text.match(
-    new RegExp(`${escaped}[^.]{0,120}?S\\/?N\\s*([A-Z0-9-]+(?:\\s*-\\s*[A-Z0-9]+)?(?:\\s+UP)?)`, "i"),
+    new RegExp(
+      `${escaped}[^.]{0,120}?S\\/?N\\s*([A-Z0-9-]+(?:\\s*-\\s*[A-Z0-9]+)?(?:\\s+UP)?)`,
+      "i",
+    ),
   );
   if (afterModel?.[1]) return afterModel[1].replace(/\s+/g, " ").toUpperCase();
   const generic = text.match(/S\/?N\s*([A-Z0-9-]+(?:\s*-\s*[A-Z0-9]+)?(?:\s+UP)?)/i);
