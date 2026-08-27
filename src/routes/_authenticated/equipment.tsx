@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
+import { useState } from "react";
 
+import { NewEquipmentPanel } from "@/components/NewEquipmentPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,7 +44,8 @@ function EquipmentPage() {
   const access = useAccess(user?.id);
   const navigate = Route.useNavigate();
   const { manufacturerId, equipmentTypeId, q } = Route.useSearch();
-  const canManage = Boolean(access.data?.canManageCatalog || access.data?.isAdmin);
+  const [showNewAsset, setShowNewAsset] = useState(false);
+  const canManage = Boolean(access.data?.canManageCatalog);
 
   const manufacturers = useQuery({
     queryKey: ["manufacturers"],
@@ -68,14 +71,16 @@ function EquipmentPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{t("nav.equipment")}</h1>
         {canManage && (
-          <Button asChild>
-            <Link to="/equipment/new">
-              <Plus className="me-2 size-4" />
-              {locale === "ar" ? "إضافة معدة جديدة وكتالوجاتها" : "New equipment & manuals"}
-            </Link>
+          <Button onClick={() => setShowNewAsset((value) => !value)}>
+            {showNewAsset ? <X className="me-2 size-4" /> : <Plus className="me-2 size-4" />}
+            {showNewAsset
+              ? locale === "ar" ? "إغلاق نموذج الإضافة" : "Close form"
+              : locale === "ar" ? "إضافة معدة جديدة وكتالوجاتها" : "New equipment & manuals"}
           </Button>
         )}
       </div>
+
+      {showNewAsset && <NewEquipmentPanel onSaved={() => setShowNewAsset(false)} />}
 
       <Card>
         <CardContent className="flex flex-wrap gap-2 p-4">
@@ -96,16 +101,10 @@ function EquipmentPage() {
               })
             }
           >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder={t("filter.manufacturer")} />
-            </SelectTrigger>
+            <SelectTrigger className="w-[200px]"><SelectValue placeholder={t("filter.manufacturer")} /></SelectTrigger>
             <SelectContent>
               <SelectItem value="any">{t("filter.any")}</SelectItem>
-              {manufacturers.data?.map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.name}
-                </SelectItem>
-              ))}
+              {manufacturers.data?.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select
@@ -117,9 +116,7 @@ function EquipmentPage() {
               })
             }
           >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder={t("filter.equipmentType")} />
-            </SelectTrigger>
+            <SelectTrigger className="w-[200px]"><SelectValue placeholder={t("filter.equipmentType")} /></SelectTrigger>
             <SelectContent>
               <SelectItem value="any">{t("filter.any")}</SelectItem>
               {types.data?.map((item) => (
@@ -142,9 +139,7 @@ function EquipmentPage() {
                 <p className="text-xs text-muted-foreground">{row.manufacturer?.name}</p>
                 {row.equipment_type && (
                   <Badge variant="outline">
-                    {locale === "ar"
-                      ? (row.equipment_type.name_ar ?? row.equipment_type.name)
-                      : row.equipment_type.name}
+                    {locale === "ar" ? (row.equipment_type.name_ar ?? row.equipment_type.name) : row.equipment_type.name}
                   </Badge>
                 )}
               </CardContent>
@@ -152,9 +147,7 @@ function EquipmentPage() {
           </Link>
         ))}
       </div>
-      {models.data?.rows.length === 0 && (
-        <p className="text-sm text-muted-foreground">{t("state.empty")}</p>
-      )}
+      {models.data?.rows.length === 0 && <p className="text-sm text-muted-foreground">{t("state.empty")}</p>}
     </div>
   );
 }
