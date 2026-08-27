@@ -917,7 +917,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
-          image_url: string | null
+          image_path: string | null
           machine_model_id: string | null
           manufacture_year: number | null
           notes: string | null
@@ -932,7 +932,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
-          image_url?: string | null
+          image_path?: string | null
           machine_model_id?: string | null
           manufacture_year?: number | null
           notes?: string | null
@@ -947,7 +947,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
-          image_url?: string | null
+          image_path?: string | null
           machine_model_id?: string | null
           manufacture_year?: number | null
           notes?: string | null

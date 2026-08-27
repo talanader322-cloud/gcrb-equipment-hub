@@ -243,33 +243,40 @@ export const assetRepository = {
 
   /**
    * Asset photos live in the PRIVATE machine-images bucket and are only ever
-   * read through short-lived signed URLs. No public bucket is used.
+   * read through short-lived signed URLs. `machine_assets.image_path` stores
+   * the storage PATH only — never a public or signed URL.
+   *
+   * Order: validate -> upload new object -> update row -> delete old object.
+   * If the row update fails the newly uploaded object is removed and the
+   * previous photo is left untouched.
    */
   async uploadAssetPhoto(assetId: string, file: File): Promise<string> {
+    await validateAssetImage(file);
+
     const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, "_");
     const path = `assets/${assetId}/${Date.now()}-${safeName}`;
-    const stored = await fileStorageService.upload("machine-images", path, file);
     const previous = await supabase
       .from("machine_assets")
-      .select("image_url")
+      .select("image_path")
       .eq("id", assetId)
       .maybeSingle();
+    const stored = await fileStorageService.upload("machine-images", path, file);
     try {
-      await this.updateAsset(assetId, { image_url: stored.path });
+      await this.updateAsset(assetId, { image_path: stored.path });
     } catch (error) {
       await fileStorageService.remove("machine-images", stored.path).catch(() => undefined);
       throw error;
     }
-    const old = previous.data?.image_url;
+    const old = previous.data?.image_path;
     if (old && old !== stored.path) {
       await fileStorageService.remove("machine-images", old).catch(() => undefined);
     }
     return stored.path;
   },
 
+  /** Signed read URL for a PRIVATE storage path. URLs are never persisted. */
   async signedPhotoUrl(path: string | null | undefined): Promise<string | null> {
     if (!path) return null;
-    if (/^https?:\/\//i.test(path)) return path;
     try {
       return await fileStorageService.getSignedUrl("machine-images", path, 3600);
     } catch {
@@ -277,3 +284,40 @@ export const assetRepository = {
     }
   },
 };
+
+export const MAX_ASSET_IMAGE_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Machine photo validation. The declared MIME type is never trusted: the real
+ * file signature (magic bytes) decides whether the file is JPEG, PNG or WebP.
+ */
+export async function validateAssetImage(file: File): Promise<"jpeg" | "png" | "webp"> {
+  if (file.size === 0) throw new Error("The selected image file is empty.");
+  if (file.size > MAX_ASSET_IMAGE_BYTES) {
+    throw new Error(
+      `The image exceeds the maximum allowed size of ${MAX_ASSET_IMAGE_BYTES / 1024 / 1024} MB.`,
+    );
+  }
+
+  const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const at = (index: number) => bytes[index] ?? -1;
+  const ascii = (start: number, end: number) =>
+    String.fromCharCode(...Array.from(bytes.slice(start, end)));
+
+  if (at(0) === 0xff && at(1) === 0xd8 && at(2) === 0xff) return "jpeg";
+  if (
+    at(0) === 0x89 &&
+    at(1) === 0x50 &&
+    at(2) === 0x4e &&
+    at(3) === 0x47 &&
+    at(4) === 0x0d &&
+    at(5) === 0x0a &&
+    at(6) === 0x1a &&
+    at(7) === 0x0a
+  ) {
+    return "png";
+  }
+  if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return "webp";
+
+  throw new Error("Only real JPEG, PNG or WebP images are accepted.");
+}

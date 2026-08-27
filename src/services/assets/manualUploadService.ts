@@ -9,8 +9,9 @@ import { fileStorageService } from "@/services/storage/fileStorageService";
  *   validate PDF -> SHA-256 -> upload to the PRIVATE `catalogs` bucket ->
  *   atomic RPC (catalogs + catalog_files + asset_manuals) -> success.
  *
- * If the RPC fails the uploaded storage object is deleted, so orphan files are
- * impossible. If the upload fails, no database row is ever created.
+ * If the RPC fails the uploaded storage object is deleted. That compensating
+ * delete can itself fail, and when it does the failure is reported loudly
+ * instead of being swallowed — orphan files are unlikely, not impossible.
  *
  * The canonical document location is catalogs -> catalog_files -> catalogs
  * bucket. asset_manuals.storage_path is legacy and is NEVER written here.
@@ -166,8 +167,23 @@ export async function uploadAssetManual(
       manualId: result.manualId,
     };
   } catch (error) {
-    // Transaction failed: never leave an orphan storage object behind.
-    await fileStorageService.remove("catalogs", stored.path).catch(() => undefined);
+    // Transaction failed: compensate by deleting the uploaded object. A failed
+    // cleanup is a high-priority condition and is never silently ignored.
+    const dbMessage = error instanceof Error ? error.message : String(error);
+    try {
+      await fileStorageService.remove("catalogs", stored.path);
+    } catch (cleanupError) {
+      const cleanupMessage =
+        cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+      // No tokens, signed URLs or credentials are logged — only the object path.
+      console.error(
+        "[manual-upload] ORPHAN STORAGE OBJECT: database registration failed and cleanup failed.",
+        { bucket: "catalogs", path: stored.path, dbMessage, cleanupMessage },
+      );
+      throw new Error(
+        `The manual could not be registered (${dbMessage}) and the uploaded file could not be removed (${cleanupMessage}). Please report this: catalogs/${stored.path}`,
+      );
+    }
     throw error;
   }
 }
@@ -177,10 +193,13 @@ export async function uploadAssetManuals(
   assetId: string,
   drafts: ManualDraft[],
   onProgress?: (done: number, total: number) => void,
+  onDraftUploaded?: (draftId: string) => void,
 ): Promise<ManualUploadResult[]> {
   const results: ManualUploadResult[] = [];
   for (let index = 0; index < drafts.length; index += 1) {
-    results.push(await uploadAssetManual(assetId, drafts[index]!));
+    const draft = drafts[index]!;
+    results.push(await uploadAssetManual(assetId, draft));
+    onDraftUploaded?.(draft.id);
     onProgress?.(index + 1, drafts.length);
   }
   return results;

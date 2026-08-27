@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ import { catalogRepository } from "@/services/repositories/catalogRepository";
 
 export function NewEquipmentPanel({ onSaved }: { onSaved?: () => void }) {
   const { locale, t } = useI18n();
+  const navigate = useNavigate();
   const { user } = useSession();
   const access = useAccess(user?.id);
   const canManage = Boolean(access.data?.canManageCatalog);
@@ -44,6 +46,9 @@ export function NewEquipmentPanel({ onSaved }: { onSaved?: () => void }) {
   const [manuals, setManuals] = useState<ManualDraft[]>([]);
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
+  // The created asset is remembered for the whole workflow, so a retry after a
+  // partial manual failure NEVER creates a second machine asset.
+  const [createdAssetId, setCreatedAssetId] = useState<string | null>(null);
 
   const selectedModel = useMemo(
     () => models.data?.rows.find((model) => model.id === form.machineModelId),
@@ -57,23 +62,44 @@ export function NewEquipmentPanel({ onSaved }: { onSaved?: () => void }) {
 
     setSaving(true);
     setProgress(0);
-    try {
-      const assetId = await assetRepository.createAsset({
-        machine_model_id: form.machineModelId,
-        serial_number: form.serialNumber.trim(),
-        asset_number: form.assetNumber.trim() || null,
-        manufacture_year: form.manufactureYear ? Number(form.manufactureYear) : null,
-        branch: form.branch.trim() || null,
-        project: form.project.trim() || null,
-        purchase_reference: form.purchaseReference.trim() || null,
-        notes: form.notes.trim() || null,
-        created_by: user.id,
-      });
 
+    let assetId = createdAssetId;
+    if (!assetId) {
+      try {
+        assetId = await assetRepository.createAsset({
+          machine_model_id: form.machineModelId,
+          serial_number: form.serialNumber.trim(),
+          asset_number: form.assetNumber.trim() || null,
+          manufacture_year: form.manufactureYear ? Number(form.manufactureYear) : null,
+          branch: form.branch.trim() || null,
+          project: form.project.trim() || null,
+          purchase_reference: form.purchaseReference.trim() || null,
+          notes: form.notes.trim() || null,
+          created_by: user.id,
+        });
+        setCreatedAssetId(assetId);
+      } catch (error) {
+        setSaving(false);
+        toast.error(error instanceof Error ? error.message : t("state.error"));
+        return;
+      }
+    }
+
+    const total = manuals.length;
+    let saved = 0;
+    try {
       // Unified original-manual pipeline: validate -> SHA-256 -> private upload
       // -> atomic catalogs/catalog_files/asset_manuals RPC -> cleanup on failure.
-      await uploadAssetManuals(assetId, manuals, (done, total) =>
-        setProgress(Math.round((done / Math.max(total, 1)) * 100)),
+      // Each successful draft is dropped from the pending list immediately, so
+      // it is never re-uploaded when the user retries.
+      await uploadAssetManuals(
+        assetId,
+        manuals,
+        (done) => {
+          saved = done;
+          setProgress(Math.round((done / Math.max(total, 1)) * 100));
+        },
+        (draftId) => setManuals((current) => current.filter((draft) => draft.id !== draftId)),
       );
 
       toast.success(
@@ -90,9 +116,22 @@ export function NewEquipmentPanel({ onSaved }: { onSaved?: () => void }) {
         notes: "",
       });
       setManuals([]);
+      setCreatedAssetId(null);
       onSaved?.();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("state.error"));
+      const detail = error instanceof Error ? error.message : t("state.error");
+      toast.error(
+        locale === "ar"
+          ? `تم إنشاء المعدة بنجاح. تم حفظ ${saved} من ${total} كتالوجات. أكمل الكتالوجات المتبقية من صفحة المعدة. (${detail})`
+          : `Equipment created successfully. ${saved} of ${total} manuals saved. Complete the remaining manuals from the equipment page. (${detail})`,
+        {
+          action: {
+            label: locale === "ar" ? "فتح صفحة المعدة" : "Open equipment page",
+            onClick: () => navigate({ to: "/assets/$assetId", params: { assetId: assetId! } }),
+          },
+          duration: 12000,
+        },
+      );
     } finally {
       setSaving(false);
     }

@@ -172,7 +172,7 @@ function AssetsPage() {
           <Link key={row.id} to="/assets/$assetId" params={{ assetId: row.id }}>
             <Card className="h-full overflow-hidden transition-colors hover:border-primary">
               <AssetPhoto
-                path={row.image_url}
+                path={row.image_path}
                 fallbackPath={row.machine_model?.image_url ?? null}
                 className="h-36 w-full"
               />
