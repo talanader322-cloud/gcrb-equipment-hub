@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Globe2, Loader2, Save, Search as SearchIcon } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ExternalLink, Globe2, Loader2, Save, Search as SearchIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -23,9 +23,31 @@ import { useI18n } from "@/lib/i18n";
 import type { OnlineResult, SearchScope } from "@/lib/types";
 import { catalogRepository } from "@/services/repositories/catalogRepository";
 import { personalRepository } from "@/services/repositories/personalRepository";
+import { sourcesRepository } from "@/services/repositories/sourcesRepository";
 import { searchService } from "@/services/searchService";
 
 const SCOPES: SearchScope[] = ["all", "models", "parts", "catalogs", "assemblies"];
+
+type LinkConfig = {
+  search_url_template?: string;
+  manufacturer_scope?: string[];
+  allows_download?: boolean;
+};
+
+function sourceConfig(value: unknown): LinkConfig {
+  return value && typeof value === "object" ? (value as LinkConfig) : {};
+}
+
+function sourceSearchUrl(
+  baseUrl: string | null,
+  configuration: unknown,
+  query: string,
+): string | null {
+  const config = sourceConfig(configuration);
+  const template = config.search_url_template?.trim();
+  if (template) return template.replaceAll("{query}", encodeURIComponent(query));
+  return baseUrl;
+}
 
 export const Route = createFileRoute("/_authenticated/search")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -50,7 +72,7 @@ export const Route = createFileRoute("/_authenticated/search")({
 });
 
 function SearchPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const navigate = Route.useNavigate();
   const { q, scope, manufacturerId } = Route.useSearch();
   const { user } = useSession();
@@ -64,7 +86,10 @@ function SearchPage() {
     queryKey: ["manufacturers"],
     queryFn: () => catalogRepository.listManufacturers(),
   });
-
+  const managedSources = useQuery({
+    queryKey: ["sources", "managed-search-links"],
+    queryFn: () => sourcesRepository.list(),
+  });
   const local = useQuery({
     queryKey: ["local-search", q, scope, manufacturerId],
     enabled: q.length > 0,
@@ -95,6 +120,13 @@ function SearchPage() {
   }
 
   const results = local.data;
+  const sourceLinks = (managedSources.data ?? [])
+    .filter((source) => source.enabled && source.connector_key === "link_template")
+    .map((source) => ({
+      source,
+      url: q ? sourceSearchUrl(source.base_url, source.configuration, q) : source.base_url,
+    }))
+    .filter((item): item is typeof item & { url: string } => Boolean(item.url));
 
   return (
     <div className="space-y-5">
@@ -180,6 +212,31 @@ function SearchPage() {
           )}
         </CardContent>
       </Card>
+
+      {q && sourceLinks.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              {locale === "ar" ? "البحث في المصادر المعتمدة" : "Search approved sources"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            {sourceLinks.map(({ source, url }) => (
+              <Button key={source.id} variant="outline" asChild>
+                <a href={url} target="_blank" rel="noreferrer">
+                  <ExternalLink className="me-2 size-4" />
+                  {locale === "ar" ? `ابحث في ${source.name}` : `Search ${source.name}`}
+                </a>
+              </Button>
+            ))}
+            <p className="basis-full text-xs text-muted-foreground">
+              {locale === "ar"
+                ? "هذه روابط بحث يديرها مدير الكتالوج وليست نتائج مؤكدة. النتائج المؤكدة تظهر فقط من Connectors المخصصة."
+                : "These are catalog-manager search links, not verified results. Verified results appear only through dedicated connectors."}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {!q && <p className="text-sm text-muted-foreground">{t("search.emptyQuery")}</p>}
       {local.isLoading && <Skeleton className="h-40 w-full" />}
@@ -284,6 +341,13 @@ function SearchPage() {
                 {row.manufacturer ?? "—"} · {row.model ?? "—"} · {row.partNumber ?? "—"} ·{" "}
                 {row.sourceName}
               </p>
+              {row.externalUrl && (
+                <Button variant="link" size="sm" asChild className="px-0">
+                  <a href={row.externalUrl} target="_blank" rel="noreferrer">
+                    {locale === "ar" ? "فتح المصدر" : "Open source"}
+                  </a>
+                </Button>
+              )}
               {access.data?.canManage ? (
                 <Button asChild variant="link" size="sm" className="px-0">
                   <Link

@@ -35,6 +35,7 @@ export type AccessLevel = {
   profile: Profile | null;
   isAdmin: boolean;
   canManage: boolean;
+  canManageCatalog: boolean;
 };
 
 /** Roles come from the dedicated user_roles table, never from the profile. */
@@ -49,11 +50,13 @@ export function useAccess(userId: string | null | undefined) {
       ]);
       if (rolesRes.error) throw new Error(rolesRes.error.message);
       const roles = (rolesRes.data ?? []).map((r) => r.role);
+      const canManage = roles.includes("system_admin") || roles.includes("catalog_manager");
       return {
         roles,
         profile: profileRes.data ?? null,
         isAdmin: roles.includes("system_admin"),
-        canManage: roles.includes("system_admin") || roles.includes("catalog_manager"),
+        canManage,
+        canManageCatalog: canManage,
       };
     },
   });
