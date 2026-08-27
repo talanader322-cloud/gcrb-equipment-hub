@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BookOpen, Camera, FileStack, HardDriveDownload } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { AssetManualUploadPanel } from "@/components/assets/AssetManualUploadPanel";
@@ -13,7 +13,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAccess, useSession } from "@/hooks/useSession";
 import { useI18n } from "@/lib/i18n";
 import { assetRepository } from "@/services/repositories/assetRepository";
-import { personalRepository } from "@/services/repositories/personalRepository";
 import { offlineCatalogService } from "@/services/offline/offlineCatalogService";
 
 export const Route = createFileRoute("/_authenticated/assets/$assetId")({
@@ -51,9 +50,9 @@ function AssetDetailPage() {
     queryFn: () => offlineCatalogService.list(),
   });
 
-  useEffect(() => {
-    if (user && asset.data) void personalRepository.trackRecent(user.id, "machine_model", assetId);
-  }, [user, asset.data, assetId]);
+  // NOTE: recent-item tracking is intentionally NOT recorded here. A machine
+  // asset id is not a machine_model id, and `machine_asset` is not yet a
+  // supported recent-items entity type.
 
   const photoMutation = useMutation({
     mutationFn: (file: File) => assetRepository.uploadAssetPhoto(assetId, file),
@@ -79,7 +78,7 @@ function AssetDetailPage() {
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
         <Card className="overflow-hidden">
           <AssetPhoto
-            path={row.image_url}
+            path={row.image_path}
             fallbackPath={model?.image_url ?? null}
             alt={model?.model_name ?? ""}
             className="h-56 w-full"
@@ -111,7 +110,7 @@ function AssetDetailPage() {
                   onClick={() => photoInput.current?.click()}
                 >
                   <Camera className="me-2 size-4" />
-                  {row.image_url ? t("assets.changePhoto") : t("assets.uploadPhoto")}
+                  {row.image_path ? t("assets.changePhoto") : t("assets.uploadPhoto")}
                 </Button>
               </>
             )}
