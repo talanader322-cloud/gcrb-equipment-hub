@@ -1,0 +1,1 @@
+export const MODEL_CATALOG_CATEGORIES = ["parts_catalog","operation_manual","service_manual","workshop_manual","maintenance_manual","engine_manual","transmission_manual","electrical_diagram","hydraulic_diagram","specification_manual","other"] as const;
