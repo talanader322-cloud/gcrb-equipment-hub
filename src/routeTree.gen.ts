@@ -25,6 +25,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedSourcesRouteImport } from './routes/_authenticated/sources'
 import { Route as AuthenticatedAssembliesAssemblyIdRouteImport } from './routes/_authenticated/assemblies.$assemblyId'
 import { Route as AuthenticatedAssetsIndexRouteImport } from './routes/_authenticated/assets.index'
+import { Route as AuthenticatedAssetsAssetIdRouteImport } from './routes/_authenticated/assets.$assetId'
 import { Route as AuthenticatedCatalogsIndexRouteImport } from './routes/_authenticated/catalogs.index'
 import { Route as AuthenticatedCatalogsCatalogIdRouteImport } from './routes/_authenticated/catalogs.$catalogId'
 import { Route as AuthenticatedModelsModelIdRouteImport } from './routes/_authenticated/models.$modelId'
@@ -113,6 +114,12 @@ const AuthenticatedAssetsIndexRoute =
     path: '/assets/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAssetsAssetIdRoute =
+  AuthenticatedAssetsAssetIdRouteImport.update({
+    id: '/assets/$assetId',
+    path: '/assets/$assetId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCatalogsIndexRoute =
   AuthenticatedCatalogsIndexRouteImport.update({
     id: '/catalogs/',
@@ -158,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/sources': typeof AuthenticatedSourcesRoute
   '/assemblies/$assemblyId': typeof AuthenticatedAssembliesAssemblyIdRoute
+  '/assets/$assetId': typeof AuthenticatedAssetsAssetIdRoute
   '/catalogs/$catalogId': typeof AuthenticatedCatalogsCatalogIdRoute
   '/models/$modelId': typeof AuthenticatedModelsModelIdRoute
   '/parts/$partId': typeof AuthenticatedPartsPartIdRoute
@@ -180,6 +188,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/sources': typeof AuthenticatedSourcesRoute
   '/assemblies/$assemblyId': typeof AuthenticatedAssembliesAssemblyIdRoute
+  '/assets/$assetId': typeof AuthenticatedAssetsAssetIdRoute
   '/catalogs/$catalogId': typeof AuthenticatedCatalogsCatalogIdRoute
   '/models/$modelId': typeof AuthenticatedModelsModelIdRoute
   '/parts/$partId': typeof AuthenticatedPartsPartIdRoute
@@ -204,6 +213,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/sources': typeof AuthenticatedSourcesRoute
   '/_authenticated/assemblies/$assemblyId': typeof AuthenticatedAssembliesAssemblyIdRoute
+  '/_authenticated/assets/$assetId': typeof AuthenticatedAssetsAssetIdRoute
   '/_authenticated/catalogs/$catalogId': typeof AuthenticatedCatalogsCatalogIdRoute
   '/_authenticated/models/$modelId': typeof AuthenticatedModelsModelIdRoute
   '/_authenticated/parts/$partId': typeof AuthenticatedPartsPartIdRoute
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/assemblies/$assemblyId'
+    | '/assets/$assetId'
     | '/catalogs/$catalogId'
     | '/models/$modelId'
     | '/parts/$partId'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/assemblies/$assemblyId'
+    | '/assets/$assetId'
     | '/catalogs/$catalogId'
     | '/models/$modelId'
     | '/parts/$partId'
@@ -273,6 +285,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/sources'
     | '/_authenticated/assemblies/$assemblyId'
+    | '/_authenticated/assets/$assetId'
     | '/_authenticated/catalogs/$catalogId'
     | '/_authenticated/models/$modelId'
     | '/_authenticated/parts/$partId'
@@ -401,6 +414,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAssetsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/assets/$assetId': {
+      id: '/_authenticated/assets/$assetId'
+      path: '/assets/$assetId'
+      fullPath: '/assets/$assetId'
+      preLoaderRoute: typeof AuthenticatedAssetsAssetIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/catalogs/': {
       id: '/_authenticated/catalogs/'
       path: '/catalogs'
@@ -452,6 +472,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSourcesRoute: typeof AuthenticatedSourcesRoute
   AuthenticatedAssembliesAssemblyIdRoute: typeof AuthenticatedAssembliesAssemblyIdRoute
+  AuthenticatedAssetsAssetIdRoute: typeof AuthenticatedAssetsAssetIdRoute
   AuthenticatedCatalogsCatalogIdRoute: typeof AuthenticatedCatalogsCatalogIdRoute
   AuthenticatedModelsModelIdRoute: typeof AuthenticatedModelsModelIdRoute
   AuthenticatedPartsPartIdRoute: typeof AuthenticatedPartsPartIdRoute
@@ -474,6 +495,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSourcesRoute: AuthenticatedSourcesRoute,
   AuthenticatedAssembliesAssemblyIdRoute:
     AuthenticatedAssembliesAssemblyIdRoute,
+  AuthenticatedAssetsAssetIdRoute: AuthenticatedAssetsAssetIdRoute,
   AuthenticatedCatalogsCatalogIdRoute: AuthenticatedCatalogsCatalogIdRoute,
   AuthenticatedModelsModelIdRoute: AuthenticatedModelsModelIdRoute,
   AuthenticatedPartsPartIdRoute: AuthenticatedPartsPartIdRoute,
