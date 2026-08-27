@@ -329,6 +329,38 @@ export const en = {
   "state.none": "—",
   "state.previous": "Previous",
   "state.next": "Next",
+
+  // institution assets (machines owned by the corporation)
+  "nav.assets": "Institution Equipment",
+  "assets.subtitle": "Machines owned by the corporation, with their original manuals.",
+  "assets.new": "New machine & manuals",
+  "assets.searchPlaceholder": "Serial number, asset number or model",
+  "assets.serialNumber": "Serial number",
+  "assets.assetNumber": "Asset number",
+  "assets.year": "Manufacture year",
+  "assets.branch": "Branch",
+  "assets.project": "Project",
+  "assets.purchaseReference": "Purchase reference",
+  "assets.notes": "Notes",
+  "assets.manualsShort": "manuals",
+  "assets.originalManuals": "Original manuals supplied with the machine",
+  "assets.modelCatalogs": "Model-level catalogs",
+  "assets.emptyTitle": "No institution equipment recorded yet",
+  "assets.emptyBody":
+    "Machines added here carry their serial number, asset number, branch and original manuals. Catalog managers can add the first machine.",
+  "assets.noManuals": "No original manuals have been attached to this machine yet.",
+  "assets.photo": "Machine photo",
+  "assets.changePhoto": "Change photo",
+  "assets.uploadPhoto": "Upload photo",
+  "assets.photoSaved": "Photo updated.",
+  "assets.photoHint": "Stored privately; opened through temporary secure links only.",
+  "assets.offlineAvailable": "Available offline",
+  "assets.addManuals": "Add original manuals",
+  "assets.manualsSaved": "Manuals saved to the institution library.",
+  "assets.openInViewer": "Open in catalog viewer",
+  "assets.pdfOnly": "This version accepts PDF files only.",
+  "assets.invalidPdf": "The selected file is not a valid PDF.",
+  "assets.imageOnly": "Please choose an image file (JPG or PNG).",
 } as const;
 
 export type TranslationKey = keyof typeof en;
