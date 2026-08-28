@@ -188,7 +188,6 @@ function KomatsuBooksImporterView() {
     })();
   }, [pushLog, t]);
 
-
   const doScan = useMutation({
     mutationFn: () => scanKomatsuBooks(),
     onMutate: () => {

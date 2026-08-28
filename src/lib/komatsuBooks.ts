@@ -605,8 +605,6 @@ export async function resolveBookTitles(
   return result;
 }
 
-
-
 /** Load already-imported book references mapped to their catalogs rows. */
 export async function loadImportedBooks(): Promise<Map<string, string>> {
   const { data, error } = await supabase
