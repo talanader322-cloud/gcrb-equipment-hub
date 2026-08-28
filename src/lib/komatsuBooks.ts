@@ -277,9 +277,12 @@ async function uploadImage(
   imageUrl: string,
 ): Promise<string | null> {
   try {
-    const res = await fetch(imageUrl);
-    if (!res.ok) return null;
-    const blob = await res.blob();
+    // Diagram CDN sends no CORS headers either — fetch via the server proxy.
+    const { base64, contentType } = await fetchKomatsuDiagram({ data: { url: imageUrl } });
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: contentType });
     const ext = (imageUrl.split(".").pop() ?? "png").split(/[/?#]/)[0] || "png";
     const path = `schemes/${catalogId}/${book}/${page}.${ext}`;
     const { error } = await supabase.storage
