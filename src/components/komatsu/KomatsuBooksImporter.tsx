@@ -266,6 +266,8 @@ function KomatsuBooksImporterView() {
   const importedMap = imported.data;
   const allPendingCount = scanned.filter((b) => !importedMap?.has(`kbp_json:${b.book}`)).length;
   const emptyFilter = filterActive && filtered.length === 0;
+  const resolvedCount = scanned.filter((b) => meta[b.book]).length;
+  const unresolvedCount = scanned.length - resolvedCount;
 
   return (
     <Card>
