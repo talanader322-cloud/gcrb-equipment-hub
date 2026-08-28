@@ -22,6 +22,8 @@ import {
 import { useAccess, useSession } from "@/hooks/useSession";
 import { useI18n } from "@/lib/i18n";
 import {
+  loadCachedBookList,
+  loadCachedBookMeta,
   loadImportedBooks,
   normalizeKeys,
   resolveBookTitles,
