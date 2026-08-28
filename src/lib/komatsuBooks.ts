@@ -453,6 +453,111 @@ function matchesAnyModel(text: string, models: string[]): boolean {
   return models.some((m) => haystack.includes(m.toLowerCase().replace(/[^a-z0-9]/g, "")));
 }
 
+/**
+ * Normalize a search term / book text so "D155-1", "D1551" and "d155 1"
+ * all compare equal. Numbers, letters, unicode included; separators dropped.
+ */
+export function normalizeKeys(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s\-_.]+/g, "");
+}
+
+export type ScannedBookMeta = {
+  title: string;
+  text: string;
+};
+
+const BOOK_META_CACHE_KEY = "gcrb-komatsu-book-meta-v1";
+
+function readBookMetaCache(): Record<string, ScannedBookMeta> {
+  if (typeof localStorage === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(BOOK_META_CACHE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, ScannedBookMeta>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeBookMetaCache(cache: Record<string, ScannedBookMeta>): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(BOOK_META_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // best-effort; title resolution still works without persistence
+  }
+}
+
+export type ResolveTitlesOptions = {
+  concurrency?: number;
+  signal?: AbortSignal;
+  onProgress?: (done: number, total: number) => void;
+};
+
+/**
+ * Fetch the first page of each book to extract its title / model text,
+ * with bounded concurrency. Results are cached in localStorage keyed by
+ * book number so an already-resolved list is instant on the next visit.
+ */
+export async function resolveBookTitles(
+  refs: KomatsuBookRef[],
+  options: ResolveTitlesOptions = {},
+): Promise<Record<string, ScannedBookMeta>> {
+  const { concurrency = 8, signal, onProgress } = options;
+  const cache = readBookMetaCache();
+  const result: Record<string, ScannedBookMeta> = {};
+  const missing = refs.filter((ref) => !cache[ref.book]);
+  let done = refs.length - missing.length;
+  onProgress?.(done, refs.length);
+
+  let index = 0;
+  const runner = async () => {
+    while (index < missing.length) {
+      if (signal?.aborted) throw new DOMException("Title resolution aborted", "AbortError");
+      const ref = missing[index++];
+      if (!ref) continue;
+      try {
+        const pages = await listKomatsuPages(ref, signal);
+        const cover = await fetchPageJson(ref, pages[0] ?? 1, signal);
+        const meta: ScannedBookMeta = {
+          title: bookTitleFrom(cover) || ref.book,
+          text: bookTextFrom(cover),
+        };
+        cache[ref.book] = meta;
+        result[ref.book] = meta;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") throw err;
+        result[ref.book] = { title: ref.book, text: "" };
+      } finally {
+        done += 1;
+        onProgress?.(done, refs.length);
+        if (done % 25 === 0) writeBookMetaCache(cache);
+      }
+    }
+  };
+
+  try {
+    await Promise.all(
+      Array.from({ length: Math.min(concurrency, missing.length) }, () => runner()),
+    );
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    throw err;
+  } finally {
+    writeBookMetaCache(cache);
+  }
+
+  for (const ref of refs) {
+    const cached = cache[ref.book];
+    if (cached) result[ref.book] = cached;
+  }
+  return result;
+}
+
 /** Load already-imported book references mapped to their catalogs rows. */
 export async function loadImportedBooks(): Promise<Map<string, string>> {
   const { data, error } = await supabase

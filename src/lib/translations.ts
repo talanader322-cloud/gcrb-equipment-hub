@@ -466,7 +466,7 @@ export const en = {
   "books.booksFound": "{count} books found",
   "books.importAll": "Import all",
   "books.importStopped": "Stopped.",
-  "books.filter": "Filter by book number or title",
+  "books.filter": "Filter by book number, title or model",
   "books.onlyMine": "Only my equipment models",
   "books.mirrorImages": "Upload diagrams to storage (required for offline)",
   "books.bookNo": "Book",
@@ -484,6 +484,14 @@ export const en = {
   "books.doneAll": "Done — {books} books, {pages} pages.",
   "books.catNotAvailable":
     "Caterpillar data is hosted on a separate platform (777parts.com) and cannot be indexed from the same source. It remains available via the online bridge (iframe).",
+  "books.resolvingTitles": "Fetching book names and models... {done}/{total}",
+  "books.titleResolved": "Book names and models ready for {count} books.",
+  "books.titleColumn": "Title / Model",
+  "books.importAllScanned": "Import all scanned",
+  "books.importSearchResults": "Import search results ({count})",
+  "books.emptyFilterHint":
+    "No book matches «{query}». Try a model, a title, or the book number — or import all scanned books.",
+  "books.noManufacturer": "Komatsu is not set up as a manufacturer yet.",
 
   // schematic catalog viewer
   "scheme.offline": "Diagrams offline",
@@ -950,7 +958,7 @@ export const ar: Record<TranslationKey, string> = {
   "books.booksFound": "تم العثور على {count} كتاب",
   "books.importAll": "استيراد الكل",
   "books.importStopped": "تم الإيقاف.",
-  "books.filter": "تصفية برقم الكتاب أو العنوان",
+  "books.filter": "تصفية برقم الكتاب أو العنوان أو الموديل",
   "books.onlyMine": "معداتي فقط",
   "books.mirrorImages": "رفع الرسوم إلى التخزين (مطلوب للعمل أوفلاين)",
   "books.bookNo": "الكتاب",
@@ -968,6 +976,14 @@ export const ar: Record<TranslationKey, string> = {
   "books.doneAll": "اكتمل — {books} كتاب، {pages} صفحة.",
   "books.catNotAvailable":
     "بيانات كاتربيلر مستضافة على منصة مستقلة (777parts.com) ولا يمكن فهرستها من نفس المصدر. تبقى متاحة عبر الجسر الإلكتروني (iframe).",
+  "books.resolvingTitles": "جارٍ جلب أسماء الكتب والموديلات... {done}/{total}",
+  "books.titleResolved": "أسماء الكتب والموديلات جاهزة لـ {count} كتاب.",
+  "books.titleColumn": "العنوان / الموديل",
+  "books.importAllScanned": "استيراد كل الكتب الممسوحة",
+  "books.importSearchResults": "استيراد نتائج البحث ({count})",
+  "books.emptyFilterHint":
+    "لا يوجد كتاب يطابق «{query}». جرّب الموديل أو العنوان أو رقم الكتاب — أو استورد كل الكتب الممسوحة.",
+  "books.noManufacturer": "كوماتسو غير مضافة كشركة مصنعة بعد.",
 
   // عارض الرسوم التخطيطية
   "scheme.offline": "الرسوم أوفلاين",

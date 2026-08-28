@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Database, ExternalLink, Loader2, Play, Square } from "lucide-react";
+import { BookOpen, Database, ExternalLink, Loader2, Play, Search, Square } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
@@ -23,10 +23,13 @@ import { useAccess, useSession } from "@/hooks/useSession";
 import { useI18n } from "@/lib/i18n";
 import {
   loadImportedBooks,
+  normalizeKeys,
+  resolveBookTitles,
   runKomatsuImport,
   scanKomatsuBooks,
   type BookImportEvent,
   type KomatsuBookRef,
+  type ScannedBookMeta,
 } from "@/lib/komatsuBooks";
 import { catalogRepository } from "@/services/repositories/catalogRepository";
 
@@ -57,6 +60,10 @@ function KomatsuBooksImporterView() {
   const logLinesRef = useRef<ReactNode[]>([]);
   const lastLogFlush = useRef(0);
   const [, setLogVersion] = useState(0);
+  const [meta, setMeta] = useState<Record<string, ScannedBookMeta>>({});
+  const [resolvingTitles, setResolvingTitles] = useState(false);
+  const [titleProgress, setTitleProgress] = useState<{ done: number; total: number } | null>(null);
+  const resolveAbortRef = useRef<AbortController | null>(null);
 
   const komatsu = useQuery({
     queryKey: ["manufacturer", "komatsu"],
@@ -124,6 +131,38 @@ function KomatsuBooksImporterView() {
     [pushLog, queryClient, t],
   );
 
+  const startResolveTitles = useCallback(
+    (scanned: KomatsuBookRef[]) => {
+      const controller = new AbortController();
+      resolveAbortRef.current = controller;
+      setResolvingTitles(true);
+      setTitleProgress({ done: 0, total: scanned.length });
+      void resolveBookTitles(scanned, {
+        signal: controller.signal,
+        onProgress: (done, total) => setTitleProgress({ done, total }),
+      })
+        .then((resolved) => {
+          if (controller.signal.aborted) return;
+          setMeta(resolved);
+          pushLog(fill(t("books.titleResolved"), { count: String(scanned.length) }));
+        })
+        .catch((err) => {
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          pushLog(
+            <span className="text-destructive">
+              titles: {err instanceof Error ? err.message : String(err)}
+            </span>,
+          );
+        })
+        .finally(() => {
+          if (resolveAbortRef.current === controller) resolveAbortRef.current = null;
+          setResolvingTitles(false);
+          setTitleProgress(null);
+        });
+    },
+    [pushLog, t],
+  );
+
   const doScan = useMutation({
     mutationFn: () => scanKomatsuBooks(),
     onMutate: () => {
@@ -136,6 +175,7 @@ function KomatsuBooksImporterView() {
       setScanning(false);
       pushLog(fill(t("books.booksFound"), { count: String(scanned.length) }));
       toast.success(fill(t("books.booksFound"), { count: String(scanned.length) }));
+      startResolveTitles(scanned);
     },
     onError: (error: Error) => {
       setScanning(false);
@@ -175,7 +215,10 @@ function KomatsuBooksImporterView() {
   });
 
   useEffect(() => {
-    return () => abortRef.current?.abort();
+    return () => {
+      abortRef.current?.abort();
+      resolveAbortRef.current?.abort();
+    };
   }, []);
 
   const stop = () => {
@@ -183,9 +226,20 @@ function KomatsuBooksImporterView() {
     setRunning(false);
   };
 
-  const filtered = (books ?? []).filter((b) => !filter || b.book.includes(filter));
+  const scanned = books ?? [];
+  const filterActive = filter.trim().length > 0;
+  const filtered = scanned.filter((b) => {
+    if (!filterActive) return true;
+    const q = normalizeKeys(filter);
+    if (!q) return true;
+    if (normalizeKeys(b.book).includes(q)) return true;
+    const m = meta[b.book];
+    if (m && (normalizeKeys(m.title).includes(q) || normalizeKeys(m.text).includes(q))) return true;
+    return false;
+  });
   const importedMap = imported.data;
-  const pendingCount = filtered.filter((b) => !importedMap?.has(`kbp_json:${b.book}`)).length;
+  const allPendingCount = scanned.filter((b) => !importedMap?.has(`kbp_json:${b.book}`)).length;
+  const emptyFilter = filterActive && filtered.length === 0;
 
   return (
     <Card>
@@ -245,17 +299,28 @@ function KomatsuBooksImporterView() {
               {t("books.scan")}
             </Button>
             {!running ? (
-              <Button
-                size="sm"
-                disabled={
-                  !books || filtered.length === 0 || !access.data?.canManageCatalog || !komatsu.data
-                }
-                onClick={() => runImport.mutate(filtered)}
-              >
-                <Play className="me-2 size-4" />
-                {t("books.importAll")}
-                {pendingCount > 0 && ` (${pendingCount})`}
-              </Button>
+              <div className="flex items-center gap-2">
+                {filterActive && filtered.length > 0 && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={!access.data?.canManageCatalog || !komatsu.data}
+                    onClick={() => runImport.mutate(filtered)}
+                  >
+                    <Search className="me-2 size-4" />
+                    {fill(t("books.importSearchResults"), { count: String(filtered.length) })}
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  disabled={!access.data?.canManageCatalog || !komatsu.data || scanned.length === 0}
+                  onClick={() => runImport.mutate(scanned)}
+                >
+                  <Play className="me-2 size-4" />
+                  {filterActive ? t("books.importAllScanned") : t("books.importAll")}
+                  {allPendingCount > 0 && ` (${allPendingCount})`}
+                </Button>
+              </div>
             ) : (
               <Button variant="destructive" size="sm" onClick={stop}>
                 <Square className="me-2 size-4" />
@@ -296,8 +361,30 @@ function KomatsuBooksImporterView() {
           </p>
         )}
 
+        {resolvingTitles && titleProgress && (
+          <p className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="size-3 animate-spin" />
+            {fill(t("books.resolvingTitles"), {
+              done: String(titleProgress.done),
+              total: String(titleProgress.total),
+            })}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => resolveAbortRef.current?.abort()}
+            >
+              {t("books.stop")}
+            </Button>
+          </p>
+        )}
+
         {books === null ? (
           <p className="text-sm text-muted-foreground">{t("books.chooseFirst")}</p>
+        ) : emptyFilter ? (
+          <p className="text-sm text-muted-foreground">
+            {fill(t("books.emptyFilterHint"), { query: filter })}
+          </p>
         ) : filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("books.noBooks")}</p>
         ) : (
@@ -306,6 +393,7 @@ function KomatsuBooksImporterView() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("books.bookNo")}</TableHead>
+                  <TableHead>{t("books.titleColumn")}</TableHead>
                   <TableHead>{t("import.jobStatus")}</TableHead>
                   <TableHead className="text-end">{t("action.open")}</TableHead>
                 </TableRow>
@@ -314,10 +402,21 @@ function KomatsuBooksImporterView() {
                 {filtered.map((b) => {
                   const catalogId = importedMap?.get(`kbp_json:${b.book}`);
                   const isCurrent = current?.book === b.book;
+                  const bookMeta = meta[b.book];
+                  const showTitle =
+                    bookMeta?.title && normalizeKeys(bookMeta.title) !== normalizeKeys(b.book)
+                      ? bookMeta.title
+                      : null;
                   return (
                     <TableRow key={b.book}>
                       <TableCell className="font-mono text-xs" dir="ltr">
                         {b.book}
+                      </TableCell>
+                      <TableCell
+                        className="max-w-64 truncate text-xs text-muted-foreground"
+                        dir="auto"
+                      >
+                        {showTitle ?? "—"}
                       </TableCell>
                       <TableCell>
                         {isCurrent ? (
