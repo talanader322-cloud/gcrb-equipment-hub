@@ -396,6 +396,109 @@ export type Database = {
           },
         ]
       }
+      catalog_scheme_parts: {
+        Row: {
+          alt: string | null
+          book_id: string | null
+          id: string
+          item_ref: string | null
+          name: string | null
+          number: string | null
+          options: Json
+          page_id: string | null
+          quantity: string | null
+          ref0: string | null
+          ref1: string | null
+          scheme_id: string
+          short_number: string | null
+        }
+        Insert: {
+          alt?: string | null
+          book_id?: string | null
+          id?: string
+          item_ref?: string | null
+          name?: string | null
+          number?: string | null
+          options?: Json
+          page_id?: string | null
+          quantity?: string | null
+          ref0?: string | null
+          ref1?: string | null
+          scheme_id: string
+          short_number?: string | null
+        }
+        Update: {
+          alt?: string | null
+          book_id?: string | null
+          id?: string
+          item_ref?: string | null
+          name?: string | null
+          number?: string | null
+          options?: Json
+          page_id?: string | null
+          quantity?: string | null
+          ref0?: string | null
+          ref1?: string | null
+          scheme_id?: string
+          short_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_scheme_parts_scheme_id_fkey"
+            columns: ["scheme_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_schemes"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      catalog_schemes: {
+        Row: {
+          catalog_id: string
+          created_at: string
+          id: string
+          image_storage_path: string | null
+          image_url: string | null
+          mirrored: boolean
+          page_number: number
+          part_count: number
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          catalog_id: string
+          created_at?: string
+          id?: string
+          image_storage_path?: string | null
+          image_url?: string | null
+          mirrored?: boolean
+          page_number: number
+          part_count?: number
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          catalog_id?: string
+          created_at?: string
+          id?: string
+          image_storage_path?: string | null
+          image_url?: string | null
+          mirrored?: boolean
+          page_number?: number
+          part_count?: number
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_schemes_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "catalogs"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       catalogs: {
         Row: {
           active: boolean
@@ -406,6 +509,7 @@ export type Database = {
           external_document_ref: string | null
           external_source_label: string | null
           external_source_reference: string | null
+          external_source_url: string | null
           file_id: string | null
           id: string
           indexed_page_count: number | null
@@ -433,6 +537,7 @@ export type Database = {
           external_document_ref?: string | null
           external_source_label?: string | null
           external_source_reference?: string | null
+          external_source_url?: string | null
           file_id?: string | null
           id?: string
           indexed_page_count?: number | null
@@ -460,6 +565,7 @@ export type Database = {
           external_document_ref?: string | null
           external_source_label?: string | null
           external_source_reference?: string | null
+          external_source_url?: string | null
           file_id?: string | null
           id?: string
           indexed_page_count?: number | null
@@ -1589,6 +1695,7 @@ export type Database = {
           match_rank: number
         }[]
       }
+      set_catalog_schemes: { Args: { p_catalog_id: string; p_pages: Json }; Returns: Json }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       suggest_part_alternates: {
@@ -1608,6 +1715,7 @@ export type Database = {
         }[]
       }
       upsert_catalog_pages: { Args: { p_catalog_id: string; p_pages: Json }; Returns: Json }
+      upsert_schematic_catalog: { Args: { p_payload: Json }; Returns: Json }
     }
     Enums: {
       app_role: "system_admin" | "catalog_manager" | "technical_user" | "viewer"

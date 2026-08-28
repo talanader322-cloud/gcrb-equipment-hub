@@ -20,6 +20,7 @@ import {
 import { useAccess, useSession } from "@/hooks/useSession";
 import { useI18n } from "@/lib/i18n";
 import { importOnlineResult, previewOnlineImport } from "@/lib/online.functions";
+import { KomatsuBooksImporter } from "@/components/komatsu/KomatsuBooksImporter";
 import { adminRepository } from "@/services/repositories/adminRepository";
 import { sourcesRepository } from "@/services/repositories/sourcesRepository";
 
@@ -86,7 +87,12 @@ function ImportPage() {
         <TabsList>
           <TabsTrigger value="online">{t("import.tabOnline")}</TabsTrigger>
           <TabsTrigger value="jobs">{t("import.tabJobs")}</TabsTrigger>
+          <TabsTrigger value="books">{t("books.tab")}</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="books">
+          <KomatsuBooksImporter />
+        </TabsContent>
 
         <TabsContent value="online" className="space-y-4">
           {sourceId && externalId && (

@@ -4,6 +4,8 @@ import type {
   AssemblyPart,
   Catalog,
   CatalogFile,
+  CatalogScheme,
+  CatalogSchemePart,
   CatalogSection,
   EquipmentType,
   MachineAlias,
@@ -72,6 +74,36 @@ export const catalogRepository = {
       .maybeSingle();
     if (error) throw new Error(error.message);
     return data;
+  },
+
+  async findManufacturerByName(name: string): Promise<Manufacturer | null> {
+    const { data, error } = await supabase
+      .from("manufacturers")
+      .select("*")
+      .ilike("name", `%${name}%`)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async listOrgModelNames(): Promise<string[]> {
+    const { data: assets, error: assetError } = await supabase
+      .from("machine_assets")
+      .select("machine_model_id");
+    if (assetError) throw new Error(assetError.message);
+    const ids = [
+      ...new Set(
+        (assets ?? []).map((a) => a.machine_model_id).filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    if (ids.length === 0) return [];
+    const { data, error } = await supabase
+      .from("machine_models")
+      .select("model_name")
+      .in("id", ids);
+    if (error) throw new Error(error.message);
+    return [...new Set((data ?? []).map((m) => m.model_name))];
   },
 
   async listEquipmentTypes(includeInactive = false): Promise<EquipmentType[]> {
@@ -183,7 +215,7 @@ export const catalogRepository = {
   },
 
   async getCatalog(id: string) {
-    const [catalog, sections, assemblies, files] = await Promise.all([
+    const [catalog, sections, assemblies, files, schemes] = await Promise.all([
       supabase.from("catalogs").select(CATALOG_SELECT).eq("id", id).maybeSingle(),
       supabase.from("catalog_sections").select("*").eq("catalog_id", id).order("sort_order"),
       supabase.from("assemblies").select("*").eq("catalog_id", id).order("sort_order"),
@@ -192,6 +224,11 @@ export const catalogRepository = {
         .select("*")
         .eq("catalog_id", id)
         .order("uploaded_at", { ascending: false }),
+      supabase
+        .from("catalog_schemes")
+        .select("*, parts:catalog_scheme_parts(*)")
+        .eq("catalog_id", id)
+        .order("page_number"),
     ]);
     if (catalog.error) throw new Error(catalog.error.message);
     if (!catalog.data) return null;
@@ -200,6 +237,7 @@ export const catalogRepository = {
       sections: (sections.data ?? []) as CatalogSection[],
       assemblies: (assemblies.data ?? []) as Assembly[],
       files: (files.data ?? []) as CatalogFile[],
+      schemes: (schemes.data ?? []) as (CatalogScheme & { parts: CatalogSchemePart[] })[],
     };
   },
 

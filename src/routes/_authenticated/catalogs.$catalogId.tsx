@@ -26,6 +26,7 @@ import { useAccess, useSession } from "@/hooks/useSession";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import type { TranslationKey } from "@/lib/translations";
+import { SchematicViewer } from "@/components/komatsu/SchematicViewer";
 import { downloadCatalogOffline } from "@/services/offline/catalogDownloadManager";
 import {
   offlineCatalogService,
@@ -255,7 +256,7 @@ function CatalogPage() {
   if (catalog.isLoading) return <Skeleton className="h-64 w-full" />;
   if (!catalog.data) return <p className="text-sm text-muted-foreground">{t("state.empty")}</p>;
 
-  const { catalog: row, sections, assemblies } = catalog.data;
+  const { catalog: row, sections, assemblies, schemes } = catalog.data;
   const selectedSection = sections.find((section) => section.id === selectedSectionId) ?? null;
   const visibleSections = sections.filter((section) => {
     const query = sectionQuery.trim().toLowerCase();
@@ -366,306 +367,311 @@ function CatalogPage() {
         </div>
       )}
 
-      <div className="grid min-h-[72vh] gap-3 xl:grid-cols-[280px_minmax(0,1fr)_310px]">
-        <Card className="overflow-hidden">
-          <CardHeader className="space-y-3 p-3">
-            <CardTitle className="text-sm">{t("viewer.contents")}</CardTitle>
-            <div className="relative">
-              <Search className="absolute start-2 top-2.5 size-4 text-muted-foreground" />
-              <Input
-                value={sectionQuery}
-                onChange={(event) => setSectionQuery(event.target.value)}
-                placeholder={locale === "ar" ? "بحث في الأقسام..." : "Search sections..."}
-                className="ps-8"
-              />
-            </div>
-          </CardHeader>
-          <CardContent className="max-h-[62vh] space-y-1 overflow-y-auto p-2 pt-0">
-            <Button
-              variant={selectedSectionId === null ? "secondary" : "ghost"}
-              className="h-auto w-full justify-start whitespace-normal px-2 py-2 text-start text-xs"
-              onClick={() => {
-                setSelectedSectionId(null);
-                setViewerPage(null);
-              }}
-            >
-              {locale === "ar" ? "كل الكتالوج" : "Whole catalog"}
-            </Button>
-            {visibleSections.map((section) => (
+      {schemes.length > 0 ? (
+        <SchematicViewer catalog={row} schemes={schemes} />
+      ) : (
+        <div className="grid min-h-[72vh] gap-3 xl:grid-cols-[280px_minmax(0,1fr)_310px]">
+          <Card className="overflow-hidden">
+            <CardHeader className="space-y-3 p-3">
+              <CardTitle className="text-sm">{t("viewer.contents")}</CardTitle>
+              <div className="relative">
+                <Search className="absolute start-2 top-2.5 size-4 text-muted-foreground" />
+                <Input
+                  value={sectionQuery}
+                  onChange={(event) => setSectionQuery(event.target.value)}
+                  placeholder={locale === "ar" ? "بحث في الأقسام..." : "Search sections..."}
+                  className="ps-8"
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="max-h-[62vh] space-y-1 overflow-y-auto p-2 pt-0">
               <Button
-                key={section.id}
-                variant={selectedSectionId === section.id ? "secondary" : "ghost"}
-                className="h-auto w-full justify-start whitespace-normal px-2 py-2 text-start"
+                variant={selectedSectionId === null ? "secondary" : "ghost"}
+                className="h-auto w-full justify-start whitespace-normal px-2 py-2 text-start text-xs"
                 onClick={() => {
-                  setSelectedSectionId(section.id);
+                  setSelectedSectionId(null);
                   setViewerPage(null);
                 }}
               >
-                <span className="min-w-0 text-xs">
-                  {section.section_number && (
-                    <span className="me-2 font-mono text-muted-foreground">
-                      {section.section_number}
-                    </span>
-                  )}
-                  {section.title}
-                  {section.page_from && (
-                    <span className="ms-2 font-mono text-[10px] text-muted-foreground">
-                      p.{section.page_from}
-                    </span>
-                  )}
-                </span>
+                {locale === "ar" ? "كل الكتالوج" : "Whole catalog"}
               </Button>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden">
-          <CardHeader className="flex-row items-center justify-between space-y-0 p-3">
-            <div>
-              <CardTitle className="text-sm">
-                {selectedSection?.title ?? t("viewer.title")}
-              </CardTitle>
-              {selectedSection?.page_from && (
-                <p className="text-xs text-muted-foreground">
-                  {t("viewer.page")} {selectedSection.page_from}
-                  {selectedSection.page_to && selectedSection.page_to !== selectedSection.page_from
-                    ? `–${selectedSection.page_to}`
-                    : ""}
-                </p>
-              )}
-            </div>
-            <Badge variant={offlineUrl ? "secondary" : "outline"} className="gap-1">
-              {offlineUrl ? <CheckCircle2 className="size-3" /> : <FileText className="size-3" />}
-              {offlineUrl ? (locale === "ar" ? "نسخة محلية" : "Local copy") : "Cloud PDF"}
-            </Badge>
-          </CardHeader>
-          <CardContent className="p-2 pt-0">
-            {viewerUrl ? (
-              <iframe
-                src={viewerUrl}
-                title={row.title}
-                className="h-[64vh] w-full rounded-md border border-border bg-background"
-              />
-            ) : (
-              <div className="flex h-[64vh] flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border text-center">
-                <FileText className="size-8 text-muted-foreground" />
-                <p className="text-sm font-medium">{t("viewer.noFile")}</p>
-                <p className="max-w-sm text-xs text-muted-foreground">{t("viewer.uploadHint")}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="space-y-3">
-          <Card>
-            <CardHeader className="p-3">
-              <CardTitle className="text-sm">{t("entity.assemblies")}</CardTitle>
-            </CardHeader>
-            <CardContent className="max-h-[38vh] space-y-1 overflow-y-auto p-2 pt-0">
-              {visibleAssemblies.length === 0 && (
-                <p className="p-2 text-xs text-muted-foreground">{t("state.none")}</p>
-              )}
-              {visibleAssemblies.map((assembly) => (
-                <Link
-                  key={assembly.id}
-                  to="/assemblies/$assemblyId"
-                  params={{ assemblyId: assembly.id }}
-                  className="flex items-start justify-between gap-2 rounded-md border border-border p-2 text-xs hover:bg-accent/60"
+              {visibleSections.map((section) => (
+                <Button
+                  key={section.id}
+                  variant={selectedSectionId === section.id ? "secondary" : "ghost"}
+                  className="h-auto w-full justify-start whitespace-normal px-2 py-2 text-start"
+                  onClick={() => {
+                    setSelectedSectionId(section.id);
+                    setViewerPage(null);
+                  }}
                 >
-                  <span className="min-w-0">
-                    {assembly.assembly_number && (
-                      <span className="me-1 font-mono text-muted-foreground">
-                        {assembly.assembly_number}
+                  <span className="min-w-0 text-xs">
+                    {section.section_number && (
+                      <span className="me-2 font-mono text-muted-foreground">
+                        {section.section_number}
                       </span>
                     )}
-                    {assembly.title}
+                    {section.title}
+                    {section.page_from && (
+                      <span className="ms-2 font-mono text-[10px] text-muted-foreground">
+                        p.{section.page_from}
+                      </span>
+                    )}
                   </span>
-                  <ExternalLink className="mt-0.5 size-3 shrink-0" />
-                </Link>
+                </Button>
               ))}
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="p-3">
-              <CardTitle className="text-sm">{t("catalog.search.title")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 p-3 pt-0">
-              <div className="flex gap-2">
-                <Input
-                  value={pageSearchTerm}
-                  onChange={(event) => setPageSearchTerm(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      setPageSearchTerm(pageSearchTerm.trim());
-                    }
-                  }}
-                  placeholder={t("catalog.search.placeholder")}
-                  className="font-mono text-xs"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setPageSearchTerm(pageSearchTerm.trim())}
-                  disabled={pageHits.isFetching}
-                >
-                  {pageHits.isFetching ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Search className="size-4" />
-                  )}
-                </Button>
-              </div>
-              {pageHits.isPending && (
-                <p className="text-xs text-muted-foreground">{t("search.running")}</p>
-              )}
-              {pageHits.data?.length === 0 && row.analysis_status !== "indexed" && (
-                <p className="text-xs text-muted-foreground">{t("catalog.search.notIndexed")}</p>
-              )}
-              {pageHits.data?.length === 0 && row.analysis_status === "indexed" && (
-                <p className="text-xs text-muted-foreground">{t("catalog.search.none")}</p>
-              )}
-              {(pageHits.data ?? []).length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {t("catalog.search.hits", { count: pageHits.data!.length })}
-                </p>
-              )}
-              <div className="max-h-56 space-y-1 overflow-y-auto">
-                {(pageHits.data ?? []).slice(0, 12).map((hit) => (
-                  <button
-                    key={hit.page_number}
-                    type="button"
-                    onClick={() => setViewerPage(hit.page_number)}
-                    className="block w-full rounded-md border border-border p-2 text-start hover:bg-accent/60"
-                  >
-                    <span className="flex items-center justify-between gap-2 text-xs">
-                      <span className="font-semibold">
-                        {t("catalog.page")} {hit.page_number}
-                      </span>
-                      <FileSearch className="size-3 text-muted-foreground" />
-                    </span>
-                    <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">
-                      {hit.content.slice(0, 160)}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="p-3">
-              <CardTitle className="text-sm">{t("catalog.analyze.title")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 p-3 pt-0 text-xs">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground">{t("viewer.info")}</span>
-                <AnalysisStatusBadge
-                  status={row.analysis_status}
-                  indexedCount={row.indexed_page_count}
-                  t={t}
-                />
-              </div>
-              {row.analysis_status === "indexed" && row.indexed_page_count !== null && (
-                <p className="text-muted-foreground">
-                  {t("catalog.indexedPages", { count: row.indexed_page_count })}
-                </p>
-              )}
-              {access.data?.canManageCatalog && primaryFile ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => analyze.mutate()}
-                  disabled={analyze.isPending || row.analysis_status === "analyzing"}
-                >
-                  {analyze.isPending || row.analysis_status === "analyzing" ? (
-                    <>
-                      <Loader2 className="me-2 size-4 animate-spin" />
-                      {t("catalog.analyze.running")}
-                    </>
-                  ) : (
-                    <>
-                      <Search className="me-2 size-4" />
-                      {t("catalog.analyze.run")}
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <p className="text-muted-foreground">{t("catalog.analyze.notAllowed")}</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="p-3">
-              <CardTitle className="text-sm">{t("viewer.info")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 p-3 pt-0 text-xs">
-              <div className="flex justify-between gap-3">
-                <span className="text-muted-foreground">{t("entity.manufacturer")}</span>
-                <span>{row.manufacturer?.name ?? "—"}</span>
-              </div>
-              <div className="flex justify-between gap-3">
-                <span className="text-muted-foreground">{t("entity.catalogNumber")}</span>
-                <span className="font-mono">{row.catalog_number ?? "—"}</span>
-              </div>
-              {row.machine_model && (
-                <div className="flex justify-between gap-3">
-                  <span className="text-muted-foreground">{t("entity.model")}</span>
-                  <Link
-                    to="/models/$modelId"
-                    params={{ modelId: row.machine_model.id }}
-                    className="font-mono text-primary hover:underline"
-                  >
-                    {row.machine_model.model_name}
-                  </Link>
-                </div>
-              )}
-              {(row.serial_from || row.serial_to) && (
-                <div className="flex justify-between gap-3">
-                  <span className="text-muted-foreground">{t("filter.serialRange")}</span>
-                  <span className="font-mono">
-                    {row.serial_from ?? "…"}–{row.serial_to ?? "UP"}
-                  </span>
-                </div>
-              )}
-              {primaryFile && (
-                <>
-                  <div className="flex justify-between gap-3">
-                    <span className="text-muted-foreground">{t("entity.file")}</span>
-                    <span
-                      className="max-w-[170px] truncate"
-                      title={primaryFile.original_filename ?? ""}
-                    >
-                      {primaryFile.original_filename ?? "PDF"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span className="text-muted-foreground">
-                      {locale === "ar" ? "الحجم" : "Size"}
-                    </span>
-                    <span>
-                      {primaryFile.file_size
-                        ? `${(Number(primaryFile.file_size) / 1024 / 1024).toFixed(1)} MB`
-                        : "—"}
-                    </span>
-                  </div>
-                </>
-              )}
-              {offlineMeta?.checksum && (
-                <div className="space-y-1 border-t pt-2">
-                  <span className="text-muted-foreground">SHA-256</span>
-                  <p className="break-all font-mono text-[10px]">
-                    {offlineMeta.checksum.replace("sha256:", "")}
+          <Card className="overflow-hidden">
+            <CardHeader className="flex-row items-center justify-between space-y-0 p-3">
+              <div>
+                <CardTitle className="text-sm">
+                  {selectedSection?.title ?? t("viewer.title")}
+                </CardTitle>
+                {selectedSection?.page_from && (
+                  <p className="text-xs text-muted-foreground">
+                    {t("viewer.page")} {selectedSection.page_from}
+                    {selectedSection.page_to &&
+                    selectedSection.page_to !== selectedSection.page_from
+                      ? `–${selectedSection.page_to}`
+                      : ""}
                   </p>
+                )}
+              </div>
+              <Badge variant={offlineUrl ? "secondary" : "outline"} className="gap-1">
+                {offlineUrl ? <CheckCircle2 className="size-3" /> : <FileText className="size-3" />}
+                {offlineUrl ? (locale === "ar" ? "نسخة محلية" : "Local copy") : "Cloud PDF"}
+              </Badge>
+            </CardHeader>
+            <CardContent className="p-2 pt-0">
+              {viewerUrl ? (
+                <iframe
+                  src={viewerUrl}
+                  title={row.title}
+                  className="h-[64vh] w-full rounded-md border border-border bg-background"
+                />
+              ) : (
+                <div className="flex h-[64vh] flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border text-center">
+                  <FileText className="size-8 text-muted-foreground" />
+                  <p className="text-sm font-medium">{t("viewer.noFile")}</p>
+                  <p className="max-w-sm text-xs text-muted-foreground">{t("viewer.uploadHint")}</p>
                 </div>
               )}
             </CardContent>
           </Card>
+
+          <div className="space-y-3">
+            <Card>
+              <CardHeader className="p-3">
+                <CardTitle className="text-sm">{t("entity.assemblies")}</CardTitle>
+              </CardHeader>
+              <CardContent className="max-h-[38vh] space-y-1 overflow-y-auto p-2 pt-0">
+                {visibleAssemblies.length === 0 && (
+                  <p className="p-2 text-xs text-muted-foreground">{t("state.none")}</p>
+                )}
+                {visibleAssemblies.map((assembly) => (
+                  <Link
+                    key={assembly.id}
+                    to="/assemblies/$assemblyId"
+                    params={{ assemblyId: assembly.id }}
+                    className="flex items-start justify-between gap-2 rounded-md border border-border p-2 text-xs hover:bg-accent/60"
+                  >
+                    <span className="min-w-0">
+                      {assembly.assembly_number && (
+                        <span className="me-1 font-mono text-muted-foreground">
+                          {assembly.assembly_number}
+                        </span>
+                      )}
+                      {assembly.title}
+                    </span>
+                    <ExternalLink className="mt-0.5 size-3 shrink-0" />
+                  </Link>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="p-3">
+                <CardTitle className="text-sm">{t("catalog.search.title")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 p-3 pt-0">
+                <div className="flex gap-2">
+                  <Input
+                    value={pageSearchTerm}
+                    onChange={(event) => setPageSearchTerm(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        setPageSearchTerm(pageSearchTerm.trim());
+                      }
+                    }}
+                    placeholder={t("catalog.search.placeholder")}
+                    className="font-mono text-xs"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setPageSearchTerm(pageSearchTerm.trim())}
+                    disabled={pageHits.isFetching}
+                  >
+                    {pageHits.isFetching ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Search className="size-4" />
+                    )}
+                  </Button>
+                </div>
+                {pageHits.isPending && (
+                  <p className="text-xs text-muted-foreground">{t("search.running")}</p>
+                )}
+                {pageHits.data?.length === 0 && row.analysis_status !== "indexed" && (
+                  <p className="text-xs text-muted-foreground">{t("catalog.search.notIndexed")}</p>
+                )}
+                {pageHits.data?.length === 0 && row.analysis_status === "indexed" && (
+                  <p className="text-xs text-muted-foreground">{t("catalog.search.none")}</p>
+                )}
+                {(pageHits.data ?? []).length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {t("catalog.search.hits", { count: pageHits.data!.length })}
+                  </p>
+                )}
+                <div className="max-h-56 space-y-1 overflow-y-auto">
+                  {(pageHits.data ?? []).slice(0, 12).map((hit) => (
+                    <button
+                      key={hit.page_number}
+                      type="button"
+                      onClick={() => setViewerPage(hit.page_number)}
+                      className="block w-full rounded-md border border-border p-2 text-start hover:bg-accent/60"
+                    >
+                      <span className="flex items-center justify-between gap-2 text-xs">
+                        <span className="font-semibold">
+                          {t("catalog.page")} {hit.page_number}
+                        </span>
+                        <FileSearch className="size-3 text-muted-foreground" />
+                      </span>
+                      <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">
+                        {hit.content.slice(0, 160)}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="p-3">
+                <CardTitle className="text-sm">{t("catalog.analyze.title")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 p-3 pt-0 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">{t("viewer.info")}</span>
+                  <AnalysisStatusBadge
+                    status={row.analysis_status}
+                    indexedCount={row.indexed_page_count}
+                    t={t}
+                  />
+                </div>
+                {row.analysis_status === "indexed" && row.indexed_page_count !== null && (
+                  <p className="text-muted-foreground">
+                    {t("catalog.indexedPages", { count: row.indexed_page_count })}
+                  </p>
+                )}
+                {access.data?.canManageCatalog && primaryFile ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => analyze.mutate()}
+                    disabled={analyze.isPending || row.analysis_status === "analyzing"}
+                  >
+                    {analyze.isPending || row.analysis_status === "analyzing" ? (
+                      <>
+                        <Loader2 className="me-2 size-4 animate-spin" />
+                        {t("catalog.analyze.running")}
+                      </>
+                    ) : (
+                      <>
+                        <Search className="me-2 size-4" />
+                        {t("catalog.analyze.run")}
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <p className="text-muted-foreground">{t("catalog.analyze.notAllowed")}</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="p-3">
+                <CardTitle className="text-sm">{t("viewer.info")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 p-3 pt-0 text-xs">
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">{t("entity.manufacturer")}</span>
+                  <span>{row.manufacturer?.name ?? "—"}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">{t("entity.catalogNumber")}</span>
+                  <span className="font-mono">{row.catalog_number ?? "—"}</span>
+                </div>
+                {row.machine_model && (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">{t("entity.model")}</span>
+                    <Link
+                      to="/models/$modelId"
+                      params={{ modelId: row.machine_model.id }}
+                      className="font-mono text-primary hover:underline"
+                    >
+                      {row.machine_model.model_name}
+                    </Link>
+                  </div>
+                )}
+                {(row.serial_from || row.serial_to) && (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">{t("filter.serialRange")}</span>
+                    <span className="font-mono">
+                      {row.serial_from ?? "…"}–{row.serial_to ?? "UP"}
+                    </span>
+                  </div>
+                )}
+                {primaryFile && (
+                  <>
+                    <div className="flex justify-between gap-3">
+                      <span className="text-muted-foreground">{t("entity.file")}</span>
+                      <span
+                        className="max-w-[170px] truncate"
+                        title={primaryFile.original_filename ?? ""}
+                      >
+                        {primaryFile.original_filename ?? "PDF"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <span className="text-muted-foreground">
+                        {locale === "ar" ? "الحجم" : "Size"}
+                      </span>
+                      <span>
+                        {primaryFile.file_size
+                          ? `${(Number(primaryFile.file_size) / 1024 / 1024).toFixed(1)} MB`
+                          : "—"}
+                      </span>
+                    </div>
+                  </>
+                )}
+                {offlineMeta?.checksum && (
+                  <div className="space-y-1 border-t pt-2">
+                    <span className="text-muted-foreground">SHA-256</span>
+                    <p className="break-all font-mono text-[10px]">
+                      {offlineMeta.checksum.replace("sha256:", "")}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
