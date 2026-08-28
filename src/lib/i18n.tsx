@@ -31,7 +31,8 @@ const globalScope = globalThis as typeof globalThis & {
   __gcrbI18nContext?: React.Context<I18nValue | null>;
 };
 const I18nContext =
-  globalScope.__gcrbI18nContext ?? (globalScope.__gcrbI18nContext = createContext<I18nValue | null>(null));
+  globalScope.__gcrbI18nContext ??
+  (globalScope.__gcrbI18nContext = createContext<I18nValue | null>(null));
 
 function applyDocument(locale: Locale) {
   if (typeof document === "undefined") return;
