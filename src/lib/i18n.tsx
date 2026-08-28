@@ -25,7 +25,14 @@ type I18nValue = {
   appName: string;
 };
 
-const I18nContext = createContext<I18nValue | null>(null);
+// Keep the context identity stable across HMR module replacements, otherwise
+// consumers rendered by an older module instance read a null context.
+const globalScope = globalThis as typeof globalThis & {
+  __gcrbI18nContext?: React.Context<I18nValue | null>;
+};
+const I18nContext =
+  globalScope.__gcrbI18nContext ??
+  (globalScope.__gcrbI18nContext = createContext<I18nValue | null>(null));
 
 function applyDocument(locale: Locale) {
   if (typeof document === "undefined") return;
