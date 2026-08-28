@@ -142,6 +142,10 @@ function KomatsuBooksImporterView() {
       void resolveBookTitles(scanned, {
         signal: controller.signal,
         onProgress: (done, total) => setTitleProgress({ done, total }),
+        onPersistError: (message) =>
+          pushLog(
+            <span className="text-destructive">{fill(t("books.persistError"), { message })}</span>,
+          ),
       })
         .then((resolved) => {
           if (controller.signal.aborted) return;
@@ -149,7 +153,11 @@ function KomatsuBooksImporterView() {
           pushLog(fill(t("books.titleResolved"), { count: String(scanned.length) }));
         })
         .catch((err) => {
-          if (err instanceof DOMException && err.name === "AbortError") return;
+          if (err instanceof DOMException && err.name === "AbortError") {
+            // Keep whatever was already persisted so filtering still works.
+            void loadCachedBookMeta().then(setMeta);
+            return;
+          }
           pushLog(
             <span className="text-destructive">
               titles: {err instanceof Error ? err.message : String(err)}
@@ -164,6 +172,22 @@ function KomatsuBooksImporterView() {
     },
     [pushLog, t],
   );
+
+  // Restore the last scan + resolved names after a page refresh.
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    void (async () => {
+      const [list, cachedMeta] = await Promise.all([loadCachedBookList(), loadCachedBookMeta()]);
+      if (Object.keys(cachedMeta).length > 0) setMeta(cachedMeta);
+      if (list && list.length > 0) {
+        setBooks((current) => current ?? list);
+        pushLog(fill(t("books.restoredList"), { count: String(list.length) }));
+      }
+    })();
+  }, [pushLog, t]);
+
 
   const doScan = useMutation({
     mutationFn: () => scanKomatsuBooks(),
