@@ -1,5 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+import {
+  MAX_BOOK_TEXT,
+  loadScannedBooks,
+  readAllBookMeta,
+  saveScannedBooks,
+  writeBookMeta,
+  type CachedBookMeta,
+} from "@/lib/komatsuBookCache";
 import { fetchKomatsuBookPage, fetchKomatsuDiagram } from "@/lib/komatsuProxy.functions";
 import type { CatalogSchemePart } from "@/lib/types";
 
