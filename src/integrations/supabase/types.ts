@@ -313,38 +313,6 @@ export type Database = {
           },
         ]
       }
-      catalog_pages: {
-        Row: {
-          catalog_id: string
-          content: string
-          extracted_at: string
-          id: string
-          page_number: number
-        }
-        Insert: {
-          catalog_id: string
-          content?: string
-          extracted_at?: string
-          id?: string
-          page_number: number
-        }
-        Update: {
-          catalog_id?: string
-          content?: string
-          extracted_at?: string
-          id?: string
-          page_number?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "catalog_pages_catalog_id_fkey"
-            columns: ["catalog_id"]
-            isOneToOne: false
-            referencedRelation: "catalogs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       catalog_sections: {
         Row: {
           catalog_id: string
@@ -396,123 +364,15 @@ export type Database = {
           },
         ]
       }
-      catalog_scheme_parts: {
-        Row: {
-          alt: string | null
-          book_id: string | null
-          id: string
-          item_ref: string | null
-          name: string | null
-          number: string | null
-          options: Json
-          page_id: string | null
-          quantity: string | null
-          ref0: string | null
-          ref1: string | null
-          scheme_id: string
-          short_number: string | null
-        }
-        Insert: {
-          alt?: string | null
-          book_id?: string | null
-          id?: string
-          item_ref?: string | null
-          name?: string | null
-          number?: string | null
-          options?: Json
-          page_id?: string | null
-          quantity?: string | null
-          ref0?: string | null
-          ref1?: string | null
-          scheme_id: string
-          short_number?: string | null
-        }
-        Update: {
-          alt?: string | null
-          book_id?: string | null
-          id?: string
-          item_ref?: string | null
-          name?: string | null
-          number?: string | null
-          options?: Json
-          page_id?: string | null
-          quantity?: string | null
-          ref0?: string | null
-          ref1?: string | null
-          scheme_id?: string
-          short_number?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "catalog_scheme_parts_scheme_id_fkey"
-            columns: ["scheme_id"]
-            isOneToOne: false
-            referencedRelation: "catalog_schemes"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      catalog_schemes: {
-        Row: {
-          catalog_id: string
-          created_at: string
-          id: string
-          image_storage_path: string | null
-          image_url: string | null
-          mirrored: boolean
-          page_number: number
-          part_count: number
-          title: string | null
-          updated_at: string
-        }
-        Insert: {
-          catalog_id: string
-          created_at?: string
-          id?: string
-          image_storage_path?: string | null
-          image_url?: string | null
-          mirrored?: boolean
-          page_number: number
-          part_count?: number
-          title?: string | null
-          updated_at?: string
-        }
-        Update: {
-          catalog_id?: string
-          created_at?: string
-          id?: string
-          image_storage_path?: string | null
-          image_url?: string | null
-          mirrored?: boolean
-          page_number?: number
-          part_count?: number
-          title?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "catalog_schemes_catalog_id_fkey"
-            columns: ["catalog_id"]
-            isOneToOne: false
-            referencedRelation: "catalogs"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       catalogs: {
         Row: {
           active: boolean
-          analysis_status: string
           catalog_number: string | null
           catalog_type: string
           created_at: string
-          external_document_ref: string | null
-          external_source_label: string | null
           external_source_reference: string | null
-          external_source_url: string | null
           file_id: string | null
           id: string
-          indexed_page_count: number | null
           language: string
           machine_model_id: string | null
           manufacturer_id: string
@@ -530,17 +390,12 @@ export type Database = {
         }
         Insert: {
           active?: boolean
-          analysis_status?: string
           catalog_number?: string | null
           catalog_type?: string
           created_at?: string
-          external_document_ref?: string | null
-          external_source_label?: string | null
           external_source_reference?: string | null
-          external_source_url?: string | null
           file_id?: string | null
           id?: string
-          indexed_page_count?: number | null
           language?: string
           machine_model_id?: string | null
           manufacturer_id: string
@@ -558,17 +413,12 @@ export type Database = {
         }
         Update: {
           active?: boolean
-          analysis_status?: string
           catalog_number?: string | null
           catalog_type?: string
           created_at?: string
-          external_document_ref?: string | null
-          external_source_label?: string | null
           external_source_reference?: string | null
-          external_source_url?: string | null
           file_id?: string | null
           id?: string
-          indexed_page_count?: number | null
           language?: string
           machine_model_id?: string | null
           manufacturer_id?: string
@@ -710,75 +560,6 @@ export type Database = {
             columns: ["catalog_id"]
             isOneToOne: false
             referencedRelation: "catalogs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      discovered_documents: {
-        Row: {
-          catalog_id: string | null
-          discovered_at: string
-          discovered_by: string | null
-          filename: string | null
-          id: string
-          kind: string
-          mime_type: string | null
-          query: string
-          size_hint: number | null
-          source_id: string | null
-          source_label: string | null
-          status: string
-          title: string
-          url: string
-          verified: boolean
-        }
-        Insert: {
-          catalog_id?: string | null
-          discovered_at?: string
-          discovered_by?: string | null
-          filename?: string | null
-          id?: string
-          kind?: string
-          mime_type?: string | null
-          query: string
-          size_hint?: number | null
-          source_id?: string | null
-          source_label?: string | null
-          status?: string
-          title: string
-          url: string
-          verified?: boolean
-        }
-        Update: {
-          catalog_id?: string | null
-          discovered_at?: string
-          discovered_by?: string | null
-          filename?: string | null
-          id?: string
-          kind?: string
-          mime_type?: string | null
-          query?: string
-          size_hint?: number | null
-          source_id?: string | null
-          source_label?: string | null
-          status?: string
-          title?: string
-          url?: string
-          verified?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "discovered_documents_catalog_id_fkey"
-            columns: ["catalog_id"]
-            isOneToOne: false
-            referencedRelation: "catalogs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "discovered_documents_source_id_fkey"
-            columns: ["source_id"]
-            isOneToOne: false
-            referencedRelation: "external_sources"
             referencedColumns: ["id"]
           },
         ]
@@ -1248,44 +1029,6 @@ export type Database = {
           },
         ]
       }
-      machine_query_log: {
-        Row: {
-          id: string
-          machine_model_id: string
-          matched: boolean
-          normalized_query: string | null
-          query: string
-          searched_at: string
-          searched_by: string | null
-        }
-        Insert: {
-          id?: string
-          machine_model_id: string
-          matched?: boolean
-          normalized_query?: string | null
-          query: string
-          searched_at?: string
-          searched_by?: string | null
-        }
-        Update: {
-          id?: string
-          machine_model_id?: string
-          matched?: boolean
-          normalized_query?: string | null
-          query?: string
-          searched_at?: string
-          searched_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "machine_query_log_machine_model_id_fkey"
-            columns: ["machine_model_id"]
-            isOneToOne: false
-            referencedRelation: "machine_models"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       manufacturers: {
         Row: {
           active: boolean
@@ -1347,57 +1090,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "part_aliases_part_id_fkey"
-            columns: ["part_id"]
-            isOneToOne: false
-            referencedRelation: "parts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      part_alternates: {
-        Row: {
-          alternate_part_id: string
-          created_at: string
-          created_by: string | null
-          id: string
-          match_pct: number
-          match_type: string
-          part_id: string
-          quality_note: string | null
-          source: string
-        }
-        Insert: {
-          alternate_part_id: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          match_pct?: number
-          match_type?: string
-          part_id: string
-          quality_note?: string | null
-          source?: string
-        }
-        Update: {
-          alternate_part_id?: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          match_pct?: number
-          match_type?: string
-          part_id?: string
-          quality_note?: string | null
-          source?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "part_alternates_alternate_part_id_fkey"
-            columns: ["alternate_part_id"]
-            isOneToOne: false
-            referencedRelation: "parts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "part_alternates_part_id_fkey"
             columns: ["part_id"]
             isOneToOne: false
             referencedRelation: "parts"
@@ -1653,7 +1345,6 @@ export type Database = {
     }
     Functions: {
       can_manage_catalog: { Args: { _user_id: string }; Returns: boolean }
-      create_catalog_from_discovery: { Args: { p_payload: Json }; Returns: Json }
       create_asset_manual: {
         Args: { p_asset_id: string; p_payload: Json }
         Returns: Json
@@ -1676,14 +1367,6 @@ export type Database = {
       }
       normalize_code: { Args: { input: string }; Returns: string }
       normalize_text: { Args: { input: string }; Returns: string }
-      search_catalog_pages: {
-        Args: { p_catalog_id: string; p_query: string }
-        Returns: {
-          content: string
-          page_number: number
-          relevance: number
-        }[]
-      }
       search_serial_model_ids: {
         Args: {
           p_equipment_type_id?: string
@@ -1695,27 +1378,8 @@ export type Database = {
           match_rank: number
         }[]
       }
-      set_catalog_schemes: { Args: { p_catalog_id: string; p_pages: Json }; Returns: Json }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
-      suggest_part_alternates: {
-        Args: { p_part_id: string }
-        Returns: {
-          basis: string
-          candidate_part_id: string
-          curated: boolean
-          description: string | null
-          manufacturer_id: string
-          manufacturer_name: string
-          match_pct: number
-          match_type: string
-          model_models: string[]
-          quality_note: string | null
-          primary_part_number: string
-        }[]
-      }
-      upsert_catalog_pages: { Args: { p_catalog_id: string; p_pages: Json }; Returns: Json }
-      upsert_schematic_catalog: { Args: { p_payload: Json }; Returns: Json }
     }
     Enums: {
       app_role: "system_admin" | "catalog_manager" | "technical_user" | "viewer"
