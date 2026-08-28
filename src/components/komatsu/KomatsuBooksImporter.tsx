@@ -418,6 +418,15 @@ function KomatsuBooksImporterView() {
           </p>
         )}
 
+        {!resolvingTitles && scanned.length > 0 && resolvedCount > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {fill(t("books.cachedProgress"), {
+              done: String(resolvedCount),
+              total: String(scanned.length),
+            })}
+          </p>
+        )}
+
         {books === null ? (
           <p className="text-sm text-muted-foreground">{t("books.chooseFirst")}</p>
         ) : emptyFilter ? (
