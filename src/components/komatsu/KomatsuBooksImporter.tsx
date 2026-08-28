@@ -22,6 +22,8 @@ import {
 import { useAccess, useSession } from "@/hooks/useSession";
 import { useI18n } from "@/lib/i18n";
 import {
+  loadCachedBookList,
+  loadCachedBookMeta,
   loadImportedBooks,
   normalizeKeys,
   resolveBookTitles,
@@ -140,6 +142,10 @@ function KomatsuBooksImporterView() {
       void resolveBookTitles(scanned, {
         signal: controller.signal,
         onProgress: (done, total) => setTitleProgress({ done, total }),
+        onPersistError: (message) =>
+          pushLog(
+            <span className="text-destructive">{fill(t("books.persistError"), { message })}</span>,
+          ),
       })
         .then((resolved) => {
           if (controller.signal.aborted) return;
@@ -147,7 +153,11 @@ function KomatsuBooksImporterView() {
           pushLog(fill(t("books.titleResolved"), { count: String(scanned.length) }));
         })
         .catch((err) => {
-          if (err instanceof DOMException && err.name === "AbortError") return;
+          if (err instanceof DOMException && err.name === "AbortError") {
+            // Keep whatever was already persisted so filtering still works.
+            void loadCachedBookMeta().then(setMeta);
+            return;
+          }
           pushLog(
             <span className="text-destructive">
               titles: {err instanceof Error ? err.message : String(err)}
@@ -162,6 +172,21 @@ function KomatsuBooksImporterView() {
     },
     [pushLog, t],
   );
+
+  // Restore the last scan + resolved names after a page refresh.
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    void (async () => {
+      const [list, cachedMeta] = await Promise.all([loadCachedBookList(), loadCachedBookMeta()]);
+      if (Object.keys(cachedMeta).length > 0) setMeta(cachedMeta);
+      if (list && list.length > 0) {
+        setBooks((current) => current ?? list);
+        pushLog(fill(t("books.restoredList"), { count: String(list.length) }));
+      }
+    })();
+  }, [pushLog, t]);
 
   const doScan = useMutation({
     mutationFn: () => scanKomatsuBooks(),
@@ -240,6 +265,8 @@ function KomatsuBooksImporterView() {
   const importedMap = imported.data;
   const allPendingCount = scanned.filter((b) => !importedMap?.has(`kbp_json:${b.book}`)).length;
   const emptyFilter = filterActive && filtered.length === 0;
+  const resolvedCount = scanned.filter((b) => meta[b.book]).length;
+  const unresolvedCount = scanned.length - resolvedCount;
 
   return (
     <Card>
@@ -300,6 +327,17 @@ function KomatsuBooksImporterView() {
             </Button>
             {!running ? (
               <div className="flex items-center gap-2">
+                {!resolvingTitles && unresolvedCount > 0 && scanned.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!access.data?.canManageCatalog}
+                    onClick={() => startResolveTitles(scanned)}
+                  >
+                    <Search className="me-2 size-4" />
+                    {fill(t("books.resumeTitles"), { count: String(unresolvedCount) })}
+                  </Button>
+                )}
                 {filterActive && filtered.length > 0 && (
                   <Button
                     variant="secondary"
@@ -376,6 +414,15 @@ function KomatsuBooksImporterView() {
             >
               {t("books.stop")}
             </Button>
+          </p>
+        )}
+
+        {!resolvingTitles && scanned.length > 0 && resolvedCount > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {fill(t("books.cachedProgress"), {
+              done: String(resolvedCount),
+              total: String(scanned.length),
+            })}
           </p>
         )}
 

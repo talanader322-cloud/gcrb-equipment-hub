@@ -1,5 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+import {
+  MAX_BOOK_TEXT,
+  loadScannedBooks,
+  readAllBookMeta,
+  saveScannedBooks,
+  writeBookMeta,
+  type CachedBookMeta,
+} from "@/lib/komatsuBookCache";
 import { fetchKomatsuBookPage, fetchKomatsuDiagram } from "@/lib/komatsuProxy.functions";
 import type { CatalogSchemePart } from "@/lib/types";
 
@@ -143,6 +151,8 @@ export async function scanKomatsuBooks(signal?: AbortSignal): Promise<KomatsuBoo
     } while (token);
   }
   books.sort((a, b) => numericCompare(a.book, b.book));
+  // Persist the list so a page refresh does not force a full re-scan.
+  await saveScannedBooks(books).catch(() => undefined);
   return books;
 }
 
@@ -477,52 +487,72 @@ export type ScannedBookMeta = {
   text: string;
 };
 
-// v2: the v1 cache may hold empty entries written while page-JSON URLs were
-// broken (doubled "p1/" prefix), so it must not be reused.
-const BOOK_META_CACHE_KEY = "gcrb-komatsu-book-meta-v2";
+/** Books that keep failing are retried at most this many times overall. */
+const MAX_TITLE_ATTEMPTS = 2;
 
-function readBookMetaCache(): Record<string, ScannedBookMeta> {
-  if (typeof localStorage === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(BOOK_META_CACHE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as Record<string, ScannedBookMeta>;
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
+/** Records already persisted from a previous session, for instant filtering. */
+export async function loadCachedBookMeta(): Promise<Record<string, ScannedBookMeta>> {
+  const cached = await readAllBookMeta();
+  const out: Record<string, ScannedBookMeta> = {};
+  for (const [book, record] of Object.entries(cached)) {
+    if (record.status === "ok") out[book] = { title: record.title, text: record.text };
   }
+  return out;
 }
 
-function writeBookMetaCache(cache: Record<string, ScannedBookMeta>): void {
-  if (typeof localStorage === "undefined") return;
-  try {
-    localStorage.setItem(BOOK_META_CACHE_KEY, JSON.stringify(cache));
-  } catch {
-    // best-effort; title resolution still works without persistence
-  }
+/** The scanned book list saved by the last successful scan (if any). */
+export async function loadCachedBookList(): Promise<KomatsuBookRef[] | null> {
+  return await loadScannedBooks();
 }
 
 export type ResolveTitlesOptions = {
   concurrency?: number;
   signal?: AbortSignal;
   onProgress?: (done: number, total: number) => void;
+  /** Called when progress could not be persisted, so the UI can warn. */
+  onPersistError?: (message: string) => void;
 };
 
 /**
  * Fetch the first page of each book to extract its title / model text,
- * with bounded concurrency. Results are cached in localStorage keyed by
- * book number so an already-resolved list is instant on the next visit.
+ * with bounded concurrency. Results are persisted in IndexedDB keyed by book
+ * number, flushed in small batches, so a refresh resumes where it stopped.
  */
 export async function resolveBookTitles(
   refs: KomatsuBookRef[],
   options: ResolveTitlesOptions = {},
 ): Promise<Record<string, ScannedBookMeta>> {
-  const { concurrency = 8, signal, onProgress } = options;
-  const cache = readBookMetaCache();
+  const { concurrency = 8, signal, onProgress, onPersistError } = options;
+  const cache = await readAllBookMeta();
   const result: Record<string, ScannedBookMeta> = {};
-  const missing = refs.filter((ref) => !cache[ref.book]);
+  for (const ref of refs) {
+    const cached = cache[ref.book];
+    if (cached?.status === "ok") result[ref.book] = { title: cached.title, text: cached.text };
+  }
+
+  const missing = refs.filter((ref) => {
+    const cached = cache[ref.book];
+    if (!cached) return true;
+    return cached.status === "error" && cached.attempts < MAX_TITLE_ATTEMPTS;
+  });
   let done = refs.length - missing.length;
   onProgress?.(done, refs.length);
+
+  let pending: CachedBookMeta[] = [];
+  let persistFailed = false;
+  const flush = async () => {
+    if (pending.length === 0) return;
+    const batch = pending;
+    pending = [];
+    try {
+      await writeBookMeta(batch);
+    } catch (err) {
+      if (!persistFailed) {
+        persistFailed = true;
+        onPersistError?.(errMsg(err));
+      }
+    }
+  };
 
   let index = 0;
   const runner = async () => {
@@ -530,22 +560,36 @@ export async function resolveBookTitles(
       if (signal?.aborted) throw new DOMException("Title resolution aborted", "AbortError");
       const ref = missing[index++];
       if (!ref) continue;
+      const attempts = (cache[ref.book]?.attempts ?? 0) + 1;
       try {
         const pages = await listKomatsuPages(ref, signal);
         const cover = await fetchPageJson(ref, pages[0] ?? 1, signal);
-        const meta: ScannedBookMeta = {
+        const record: CachedBookMeta = {
+          book: ref.book,
           title: bookTitleFrom(cover) || ref.book,
-          text: bookTextFrom(cover),
+          text: bookTextFrom(cover).slice(0, MAX_BOOK_TEXT),
+          status: "ok",
+          attempts,
         };
-        cache[ref.book] = meta;
-        result[ref.book] = meta;
+        cache[ref.book] = record;
+        result[ref.book] = { title: record.title, text: record.text };
+        pending.push(record);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") throw err;
+        const record: CachedBookMeta = {
+          book: ref.book,
+          title: ref.book,
+          text: "",
+          status: "error",
+          attempts,
+        };
+        cache[ref.book] = record;
         result[ref.book] = { title: ref.book, text: "" };
+        pending.push(record);
       } finally {
         done += 1;
         onProgress?.(done, refs.length);
-        if (done % 25 === 0) writeBookMetaCache(cache);
+        if (pending.length >= 20) await flush();
       }
     }
   };
@@ -554,17 +598,10 @@ export async function resolveBookTitles(
     await Promise.all(
       Array.from({ length: Math.min(concurrency, missing.length) }, () => runner()),
     );
-  } catch (err) {
-    if (err instanceof DOMException && err.name === "AbortError") throw err;
-    throw err;
   } finally {
-    writeBookMetaCache(cache);
+    await flush();
   }
 
-  for (const ref of refs) {
-    const cached = cache[ref.book];
-    if (cached) result[ref.book] = cached;
-  }
   return result;
 }
 
