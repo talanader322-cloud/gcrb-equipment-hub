@@ -151,6 +151,8 @@ export async function scanKomatsuBooks(signal?: AbortSignal): Promise<KomatsuBoo
     } while (token);
   }
   books.sort((a, b) => numericCompare(a.book, b.book));
+  // Persist the list so a page refresh does not force a full re-scan.
+  await saveScannedBooks(books).catch(() => undefined);
   return books;
 }
 
