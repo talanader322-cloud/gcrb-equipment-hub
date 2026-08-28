@@ -16,7 +16,9 @@ import type { CatalogSchemePart } from "@/lib/types";
  * also works without any credentials.
  */
 
-const GCS_BASE = "https://storage.googleapis.com/kbp_json/p1/";
+// BookRef.dir already carries the full object prefix (e.g. "p1/2/12/"), so the
+// base URL must stop at the bucket root to avoid a doubled "p1/p1/…" path.
+const GCS_BASE = "https://storage.googleapis.com/kbp_json/";
 const GCS_LIST = "https://storage.googleapis.com/storage/v1/b/kbp_json/o";
 
 export type KomatsuBookRef = {
