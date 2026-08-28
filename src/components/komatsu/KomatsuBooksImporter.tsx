@@ -81,9 +81,9 @@ function KomatsuBooksImporterView() {
 
   const pushLog = useCallback((line: ReactNode) => {
     logLinesRef.current.push(
-      <p key={logLinesRef.current.length} dir="ltr">
+      <span key={logLinesRef.current.length} dir="ltr" className="block">
         <span className="text-muted-foreground">{new Date().toLocaleTimeString()}</span> {line}
-      </p>,
+      </span>,
     );
     if (logLinesRef.current.length > 400) logLinesRef.current.shift();
     const now = Date.now();

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+import { fetchKomatsuBookPage, fetchKomatsuDiagram } from "@/lib/komatsuProxy.functions";
 import type { CatalogSchemePart } from "@/lib/types";
 
 /**
@@ -16,7 +17,9 @@ import type { CatalogSchemePart } from "@/lib/types";
  * also works without any credentials.
  */
 
-const GCS_BASE = "https://storage.googleapis.com/kbp_json/p1/";
+// BookRef.dir already carries the full object prefix (e.g. "p1/2/12/"), so the
+// base URL must stop at the bucket root to avoid a doubled "p1/p1/…" path.
+const GCS_BASE = "https://storage.googleapis.com/kbp_json/";
 const GCS_LIST = "https://storage.googleapis.com/storage/v1/b/kbp_json/o";
 
 export type KomatsuBookRef = {
@@ -176,11 +179,13 @@ async function fetchPageJson(
   page: number,
   signal?: AbortSignal,
 ): Promise<GcsPageJson> {
-  const init: RequestInit = {};
-  if (signal) init.signal = signal;
-  const res = await fetch(`${GCS_BASE}${book.dir}${page}.json`, init);
-  if (!res.ok) throw new Error(`Page ${page}: HTTP ${res.status}`);
-  return (await res.json()) as GcsPageJson;
+  // The GCS bucket sends no CORS headers, so page JSON is fetched through a
+  // same-origin server function instead of directly from the browser.
+  if (signal?.aborted) throw new DOMException("Import aborted", "AbortError");
+  const text = await fetchKomatsuBookPage({
+    data: { url: `${GCS_BASE}${book.dir}${page}.json` },
+  });
+  return JSON.parse(text) as GcsPageJson;
 }
 
 function normalizeImages(list: unknown[] | null | undefined): string[] {
@@ -272,9 +277,12 @@ async function uploadImage(
   imageUrl: string,
 ): Promise<string | null> {
   try {
-    const res = await fetch(imageUrl);
-    if (!res.ok) return null;
-    const blob = await res.blob();
+    // Diagram CDN sends no CORS headers either — fetch via the server proxy.
+    const { base64, contentType } = await fetchKomatsuDiagram({ data: { url: imageUrl } });
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: contentType });
     const ext = (imageUrl.split(".").pop() ?? "png").split(/[/?#]/)[0] || "png";
     const path = `schemes/${catalogId}/${book}/${page}.${ext}`;
     const { error } = await supabase.storage
@@ -469,7 +477,9 @@ export type ScannedBookMeta = {
   text: string;
 };
 
-const BOOK_META_CACHE_KEY = "gcrb-komatsu-book-meta-v1";
+// v2: the v1 cache may hold empty entries written while page-JSON URLs were
+// broken (doubled "p1/" prefix), so it must not be reused.
+const BOOK_META_CACHE_KEY = "gcrb-komatsu-book-meta-v2";
 
 function readBookMetaCache(): Record<string, ScannedBookMeta> {
   if (typeof localStorage === "undefined") return {};
