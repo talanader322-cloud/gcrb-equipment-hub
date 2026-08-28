@@ -328,6 +328,17 @@ function KomatsuBooksImporterView() {
             </Button>
             {!running ? (
               <div className="flex items-center gap-2">
+                {!resolvingTitles && unresolvedCount > 0 && scanned.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!access.data?.canManageCatalog}
+                    onClick={() => startResolveTitles(scanned)}
+                  >
+                    <Search className="me-2 size-4" />
+                    {fill(t("books.resumeTitles"), { count: String(unresolvedCount) })}
+                  </Button>
+                )}
                 {filterActive && filtered.length > 0 && (
                   <Button
                     variant="secondary"
