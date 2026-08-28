@@ -24,7 +24,7 @@ export const fetchKomatsuBookPage = createServerFn({ method: "GET" })
     }
     const res = await fetch(data.url);
     if (!res.ok) throw new Error(`Page fetch failed: HTTP ${res.status}`);
-    return (await res.json()) as unknown;
+    return (await res.json()) as Record<string, unknown>;
   });
 
 export const fetchKomatsuDiagram = createServerFn({ method: "GET" })
