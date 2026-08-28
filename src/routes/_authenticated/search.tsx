@@ -22,6 +22,7 @@ import { searchOnline } from "@/lib/online.functions";
 import { useI18n } from "@/lib/i18n";
 import type { OnlineResult, SearchScope } from "@/lib/types";
 import { catalogRepository } from "@/services/repositories/catalogRepository";
+import { intelligenceRepository } from "@/services/repositories/intelligenceRepository";
 import { personalRepository } from "@/services/repositories/personalRepository";
 import { sourcesRepository } from "@/services/repositories/sourcesRepository";
 import { searchService } from "@/services/searchService";
@@ -260,6 +261,7 @@ function SearchPage() {
               key={row.id}
               to="/models/$modelId"
               params={{ modelId: row.id }}
+              onClick={() => void intelligenceRepository.trackModelQuery(row.id, q, true)}
               className="block rounded-md border border-border p-3 hover:bg-accent/60"
             >
               <p className="font-mono text-sm font-semibold">{row.model_name}</p>

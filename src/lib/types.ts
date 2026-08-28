@@ -23,6 +23,10 @@ export type SavedSearch = Tables["saved_searches"]["Row"];
 export type DownloadRecord = Tables["download_records"]["Row"];
 export type Profile = Tables["profiles"]["Row"];
 export type AppRole = Database["public"]["Enums"]["app_role"];
+export type CatalogPage = Tables["catalog_pages"]["Row"];
+export type PartAlternate = Tables["part_alternates"]["Row"];
+export type MachineQueryLog = Tables["machine_query_log"]["Row"];
+export type DiscoveredDocument = Tables["discovered_documents"]["Row"];
 
 export const APP_ROLES: AppRole[] = ["system_admin", "catalog_manager", "technical_user", "viewer"];
 

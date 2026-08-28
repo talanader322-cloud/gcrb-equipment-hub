@@ -4,8 +4,10 @@ import {
   CheckCircle2,
   Download,
   ExternalLink,
+  FileSearch,
   FileText,
   HardDriveDownload,
+  Loader2,
   Search,
   Star,
   Trash2,
@@ -22,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAccess, useSession } from "@/hooks/useSession";
 import { useI18n } from "@/lib/i18n";
+import { supabase } from "@/integrations/supabase/client";
 import type { TranslationKey } from "@/lib/translations";
 import { downloadCatalogOffline } from "@/services/offline/catalogDownloadManager";
 import {
@@ -30,7 +33,9 @@ import {
 } from "@/services/offline/offlineCatalogService";
 import { adminRepository } from "@/services/repositories/adminRepository";
 import { catalogRepository } from "@/services/repositories/catalogRepository";
+import { intelligenceRepository } from "@/services/repositories/intelligenceRepository";
 import { personalRepository } from "@/services/repositories/personalRepository";
+import { pdfAnalysisService } from "@/services/pdf/pdfAnalysisService";
 import { buildCatalogPath, fileStorageService } from "@/services/storage/fileStorageService";
 
 export const Route = createFileRoute("/_authenticated/catalogs/$catalogId")({
@@ -60,6 +65,14 @@ function CatalogPage() {
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
   const [sectionQuery, setSectionQuery] = useState("");
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const [pageSearchTerm, setPageSearchTerm] = useState("");
+  const [viewerPage, setViewerPage] = useState<number | null>(null);
+
+  const pageHits = useQuery({
+    queryKey: ["catalog-pages", catalogId, pageSearchTerm],
+    enabled: pageSearchTerm.trim().length > 0,
+    queryFn: () => intelligenceRepository.searchCatalogPages(catalogId, pageSearchTerm.trim()),
+  });
 
   const catalog = useQuery({
     queryKey: ["catalog", catalogId],
@@ -193,6 +206,52 @@ function CatalogPage() {
     },
   });
 
+  const analyze = useMutation({
+    mutationFn: async () => {
+      if (!primaryFile) throw new Error(t("viewer.noFile"));
+      await intelligenceRepository.setCatalogAnalysisStatus(catalogId, "analyzing");
+      const signed = await fileStorageService.getSignedUrl(
+        "catalogs",
+        primaryFile.storage_path,
+        3600,
+      );
+      const response = await fetch(signed, { signal: AbortSignal.timeout(120000) });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const buffer = await response.arrayBuffer();
+      const analysis = await pdfAnalysisService.analyze(new Uint8Array(buffer));
+      if (!analysis.ok) {
+        await intelligenceRepository.setCatalogAnalysisStatus(catalogId, "failed");
+        throw new Error(analysis.note ?? "PDF analysis failed");
+      }
+      const textPages = analysis.pages.filter((page) => page.content.length > 0);
+      if (textPages.length === 0) {
+        await intelligenceRepository.setCatalogAnalysisStatus(catalogId, "failed");
+        return { ok: true as const, textPages: 0, total: analysis.pageCount };
+      }
+      const { error } = await supabase.rpc("upsert_catalog_pages", {
+        p_catalog_id: catalogId,
+        p_pages: textPages,
+      });
+      if (error) {
+        await intelligenceRepository.setCatalogAnalysisStatus(catalogId, "failed");
+        throw new Error(error.message);
+      }
+      return { ok: true as const, textPages: textPages.length, total: analysis.pageCount };
+    },
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: ["catalog", catalogId] });
+      if (result.ok && result.textPages === 0) {
+        toast.info(t("catalog.analyze.noText"));
+      } else if (result.ok) {
+        toast.success(t("catalog.analyze.result", { count: result.textPages }));
+      }
+    },
+    onError: (error: Error) => {
+      void queryClient.invalidateQueries({ queryKey: ["catalog", catalogId] });
+      toast.error(error.message);
+    },
+  });
+
   if (catalog.isLoading) return <Skeleton className="h-64 w-full" />;
   if (!catalog.data) return <p className="text-sm text-muted-foreground">{t("state.empty")}</p>;
 
@@ -207,10 +266,11 @@ function CatalogPage() {
     ? assemblies.filter((assembly) => assembly.section_id === selectedSection.id)
     : assemblies;
   const viewerBaseUrl = offlineUrl ?? cloudUrl;
+  const pageAnchor = viewerPage ?? selectedSection?.page_from ?? null;
   const viewerUrl = !viewerBaseUrl
     ? null
-    : selectedSection?.page_from
-      ? `${viewerBaseUrl}#page=${selectedSection.page_from}`
+    : pageAnchor
+      ? `${viewerBaseUrl}#page=${pageAnchor}`
       : viewerBaseUrl;
 
   return (
@@ -324,7 +384,10 @@ function CatalogPage() {
             <Button
               variant={selectedSectionId === null ? "secondary" : "ghost"}
               className="h-auto w-full justify-start whitespace-normal px-2 py-2 text-start text-xs"
-              onClick={() => setSelectedSectionId(null)}
+              onClick={() => {
+                setSelectedSectionId(null);
+                setViewerPage(null);
+              }}
             >
               {locale === "ar" ? "كل الكتالوج" : "Whole catalog"}
             </Button>
@@ -333,7 +396,10 @@ function CatalogPage() {
                 key={section.id}
                 variant={selectedSectionId === section.id ? "secondary" : "ghost"}
                 className="h-auto w-full justify-start whitespace-normal px-2 py-2 text-start"
-                onClick={() => setSelectedSectionId(section.id)}
+                onClick={() => {
+                  setSelectedSectionId(section.id);
+                  setViewerPage(null);
+                }}
               >
                 <span className="min-w-0 text-xs">
                   {section.section_number && (
@@ -422,6 +488,118 @@ function CatalogPage() {
 
           <Card>
             <CardHeader className="p-3">
+              <CardTitle className="text-sm">{t("catalog.search.title")}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 p-3 pt-0">
+              <div className="flex gap-2">
+                <Input
+                  value={pageSearchTerm}
+                  onChange={(event) => setPageSearchTerm(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      setPageSearchTerm(pageSearchTerm.trim());
+                    }
+                  }}
+                  placeholder={t("catalog.search.placeholder")}
+                  className="font-mono text-xs"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setPageSearchTerm(pageSearchTerm.trim())}
+                  disabled={pageHits.isFetching}
+                >
+                  {pageHits.isFetching ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Search className="size-4" />
+                  )}
+                </Button>
+              </div>
+              {pageHits.isPending && (
+                <p className="text-xs text-muted-foreground">{t("search.running")}</p>
+              )}
+              {pageHits.data?.length === 0 && row.analysis_status !== "indexed" && (
+                <p className="text-xs text-muted-foreground">{t("catalog.search.notIndexed")}</p>
+              )}
+              {pageHits.data?.length === 0 && row.analysis_status === "indexed" && (
+                <p className="text-xs text-muted-foreground">{t("catalog.search.none")}</p>
+              )}
+              {(pageHits.data ?? []).length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {t("catalog.search.hits", { count: pageHits.data!.length })}
+                </p>
+              )}
+              <div className="max-h-56 space-y-1 overflow-y-auto">
+                {(pageHits.data ?? []).slice(0, 12).map((hit) => (
+                  <button
+                    key={hit.page_number}
+                    type="button"
+                    onClick={() => setViewerPage(hit.page_number)}
+                    className="block w-full rounded-md border border-border p-2 text-start hover:bg-accent/60"
+                  >
+                    <span className="flex items-center justify-between gap-2 text-xs">
+                      <span className="font-semibold">
+                        {t("catalog.page")} {hit.page_number}
+                      </span>
+                      <FileSearch className="size-3 text-muted-foreground" />
+                    </span>
+                    <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">
+                      {hit.content.slice(0, 160)}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="p-3">
+              <CardTitle className="text-sm">{t("catalog.analyze.title")}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 p-3 pt-0 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">{t("viewer.info")}</span>
+                <AnalysisStatusBadge
+                  status={row.analysis_status}
+                  indexedCount={row.indexed_page_count}
+                  t={t}
+                />
+              </div>
+              {row.analysis_status === "indexed" && row.indexed_page_count !== null && (
+                <p className="text-muted-foreground">
+                  {t("catalog.indexedPages", { count: row.indexed_page_count })}
+                </p>
+              )}
+              {access.data?.canManageCatalog && primaryFile ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => analyze.mutate()}
+                  disabled={analyze.isPending || row.analysis_status === "analyzing"}
+                >
+                  {analyze.isPending || row.analysis_status === "analyzing" ? (
+                    <>
+                      <Loader2 className="me-2 size-4 animate-spin" />
+                      {t("catalog.analyze.running")}
+                    </>
+                  ) : (
+                    <>
+                      <Search className="me-2 size-4" />
+                      {t("catalog.analyze.run")}
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <p className="text-muted-foreground">{t("catalog.analyze.notAllowed")}</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="p-3">
               <CardTitle className="text-sm">{t("viewer.info")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 p-3 pt-0 text-xs">
@@ -489,5 +667,35 @@ function CatalogPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function AnalysisStatusBadge({
+  status,
+  indexedCount,
+  t,
+}: {
+  status: string | null;
+  indexedCount: number | null;
+  t: ReturnType<typeof useI18n>["t"];
+}) {
+  let label: string;
+  if (status === "indexed") label = t("catalog.analysis.indexed");
+  else if (status === "analyzing") label = t("catalog.analysis.analyzing");
+  else if (status === "failed") label = t("catalog.analysis.failed");
+  else label = t("catalog.analysis.none");
+  const variant: "default" | "secondary" | "outline" | "destructive" =
+    status === "indexed"
+      ? "secondary"
+      : status === "failed"
+        ? "destructive"
+        : status === "analyzing"
+          ? "outline"
+          : "outline";
+  return (
+    <Badge variant={variant} className="shrink-0 text-[11px]">
+      {label}
+      {status === "indexed" && indexedCount !== null ? ` · ${indexedCount}` : ""}
+    </Badge>
   );
 }

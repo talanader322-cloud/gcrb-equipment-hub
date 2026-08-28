@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Plus, X } from "lucide-react";
+import { BookOpen, Plus, X } from "lucide-react";
 import { useState } from "react";
 
 import { NewEquipmentPanel } from "@/components/NewEquipmentPanel";
@@ -152,13 +152,19 @@ function EquipmentPage() {
               <CardContent className="space-y-1 p-4">
                 <p className="font-mono text-base font-semibold">{row.model_name}</p>
                 <p className="text-xs text-muted-foreground">{row.manufacturer?.name}</p>
-                {row.equipment_type && (
-                  <Badge variant="outline">
-                    {locale === "ar"
-                      ? (row.equipment_type.name_ar ?? row.equipment_type.name)
-                      : row.equipment_type.name}
+                <div className="flex items-center gap-2">
+                  {row.equipment_type && (
+                    <Badge variant="outline">
+                      {locale === "ar"
+                        ? (row.equipment_type.name_ar ?? row.equipment_type.name)
+                        : row.equipment_type.name}
+                    </Badge>
+                  )}
+                  <Badge variant="secondary" className="gap-1 font-mono">
+                    <BookOpen className="size-3" />
+                    {models.data?.catalogCounts[row.id] ?? 0}
                   </Badge>
-                )}
+                </div>
               </CardContent>
             </Card>
           </Link>

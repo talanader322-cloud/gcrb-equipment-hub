@@ -99,11 +99,25 @@ export const catalogRepository = {
     if (params.search) q = q.ilike("model_name", `%${params.search}%`);
     const { data, error, count } = await q;
     if (error) throw new Error(error.message);
-    return { rows: data ?? [], total: count ?? 0 };
+    const modelIds = (data ?? []).map((model) => model.id);
+    let catalogCounts: Record<string, number> = {};
+    if (modelIds.length > 0) {
+      const { data: catalogRows, error: catalogError } = await supabase
+        .from("catalogs")
+        .select("machine_model_id")
+        .in("machine_model_id", modelIds);
+      if (catalogError) throw new Error(catalogError.message);
+      catalogCounts = (catalogRows ?? []).reduce<Record<string, number>>((acc, item) => {
+        if (item.machine_model_id)
+          acc[item.machine_model_id] = (acc[item.machine_model_id] ?? 0) + 1;
+        return acc;
+      }, {});
+    }
+    return { rows: data ?? [], total: count ?? 0, catalogCounts };
   },
 
   async getModel(id: string) {
-    const [model, aliases, serials, catalogs, compat] = await Promise.all([
+    const [model, aliases, serials, catalogs, compat, assets] = await Promise.all([
       supabase.from("machine_models").select(MODEL_SELECT).eq("id", id).maybeSingle(),
       supabase.from("machine_aliases").select("*").eq("machine_model_id", id),
       supabase.from("serial_ranges").select("*").eq("machine_model_id", id).order("serial_from"),
@@ -113,6 +127,11 @@ export const catalogRepository = {
         .select("*, part:parts(*, manufacturer:manufacturers(id,name,slug))")
         .eq("machine_model_id", id)
         .limit(200),
+      supabase
+        .from("machine_assets")
+        .select("id, serial_number, asset_number, branch, manufacture_year, machine_model_id")
+        .eq("machine_model_id", id)
+        .order("serial_number"),
     ]);
     if (model.error) throw new Error(model.error.message);
     if (!model.data) return null;
@@ -122,7 +141,21 @@ export const catalogRepository = {
       serialRanges: (serials.data ?? []) as SerialRange[],
       catalogs: catalogs.data ?? [],
       compatibility: compat.data ?? [],
+      assets: assets.data ?? [],
     };
+  },
+
+  async catalogCountsByModel(modelIds: string[]): Promise<Record<string, number>> {
+    if (modelIds.length === 0) return {};
+    const { data, error } = await supabase
+      .from("catalogs")
+      .select("machine_model_id")
+      .in("machine_model_id", modelIds);
+    if (error) throw new Error(error.message);
+    return (data ?? []).reduce<Record<string, number>>((acc, item) => {
+      if (item.machine_model_id) acc[item.machine_model_id] = (acc[item.machine_model_id] ?? 0) + 1;
+      return acc;
+    }, {});
   },
 
   async listCatalogs(params: {

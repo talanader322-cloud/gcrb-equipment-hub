@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { HardHat, Plus, X } from "lucide-react";
+import { BookOpen, HardHat, Plus, X } from "lucide-react";
 import { useState } from "react";
 
 import { AssetPhoto } from "@/components/assets/AssetPhoto";
@@ -75,6 +75,15 @@ function AssetsPage() {
         ...(year ? { manufactureYear: Number(year) } : {}),
         ...(q ? { search: q } : {}),
       }),
+  });
+
+  const modelIds = (assets.data?.rows ?? [])
+    .map((row) => row.machine_model?.id)
+    .filter((value): value is string => Boolean(value));
+  const catalogCounts = useQuery({
+    queryKey: ["catalog-counts", "assets", modelIds.slice().sort().join(",")],
+    enabled: modelIds.length > 0,
+    queryFn: () => catalogRepository.catalogCountsByModel(modelIds),
   });
 
   return (
@@ -181,9 +190,15 @@ function AssetsPage() {
                   <p className="font-mono text-base font-semibold" dir="ltr">
                     {row.machine_model?.model_name ?? t("state.none")}
                   </p>
-                  <Badge variant="outline">
-                    {row.manualCount} {t("assets.manualsShort")}
-                  </Badge>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <Badge variant="outline" className="gap-1 font-mono">
+                      <BookOpen className="size-3" />
+                      {catalogCounts.data?.[row.machine_model?.id ?? ""] ?? 0}
+                    </Badge>
+                    <Badge variant="outline">
+                      {row.manualCount} {t("assets.manualsShort")}
+                    </Badge>
+                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {row.machine_model?.manufacturer?.name ?? t("state.none")}
