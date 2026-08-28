@@ -471,7 +471,9 @@ export type ScannedBookMeta = {
   text: string;
 };
 
-const BOOK_META_CACHE_KEY = "gcrb-komatsu-book-meta-v1";
+// v2: the v1 cache may hold empty entries written while page-JSON URLs were
+// broken (doubled "p1/" prefix), so it must not be reused.
+const BOOK_META_CACHE_KEY = "gcrb-komatsu-book-meta-v2";
 
 function readBookMetaCache(): Record<string, ScannedBookMeta> {
   if (typeof localStorage === "undefined") return {};
