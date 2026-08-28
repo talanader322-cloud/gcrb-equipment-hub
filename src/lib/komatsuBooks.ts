@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+import { fetchKomatsuBookPage, fetchKomatsuDiagram } from "@/lib/komatsuProxy.functions";
 import type { CatalogSchemePart } from "@/lib/types";
 
 /**
@@ -178,11 +179,13 @@ async function fetchPageJson(
   page: number,
   signal?: AbortSignal,
 ): Promise<GcsPageJson> {
-  const init: RequestInit = {};
-  if (signal) init.signal = signal;
-  const res = await fetch(`${GCS_BASE}${book.dir}${page}.json`, init);
-  if (!res.ok) throw new Error(`Page ${page}: HTTP ${res.status}`);
-  return (await res.json()) as GcsPageJson;
+  // The GCS bucket sends no CORS headers, so page JSON is fetched through a
+  // same-origin server function instead of directly from the browser.
+  if (signal?.aborted) throw new DOMException("Import aborted", "AbortError");
+  const text = await fetchKomatsuBookPage({
+    data: { url: `${GCS_BASE}${book.dir}${page}.json` },
+  });
+  return JSON.parse(text) as GcsPageJson;
 }
 
 function normalizeImages(list: unknown[] | null | undefined): string[] {
