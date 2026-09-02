@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BookOpen, Factory, History, Layers, Package, Truck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { DiscoveryPanel } from "@/components/discovery/DiscoveryPanel";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,7 @@ import { useI18n } from "@/lib/i18n";
 import { CATALOG_TYPES, type CatalogType, type MachineQueryLog } from "@/lib/types";
 import { catalogRepository } from "@/services/repositories/catalogRepository";
 import { intelligenceRepository } from "@/services/repositories/intelligenceRepository";
-import { personalRepository } from "@/services/repositories/personalRepository";
+
 
 export const Route = createFileRoute("/_authenticated/models/$modelId")({
   head: () => ({
@@ -54,9 +54,6 @@ function ModelPage() {
     queryFn: () => intelligenceRepository.listModelQueries(modelId, 8),
   });
 
-  useEffect(() => {
-    if (user && model.data) void personalRepository.trackRecent(user.id, "machine_model", modelId);
-  }, [user, model.data, modelId]);
 
   if (model.isLoading) return <Skeleton className="h-64 w-full" />;
   if (!model.data) return <p className="text-sm text-muted-foreground">{t("state.empty")}</p>;

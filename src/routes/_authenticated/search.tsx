@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ExternalLink, Globe2, Loader2, Save, Search as SearchIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -80,8 +80,13 @@ function SearchPage() {
   const access = useAccess(user?.id);
   const [term, setTerm] = useState(q);
   const [online, setOnline] = useState<OnlineResult[]>([]);
+  const automaticSearchKey = useRef("");
 
-  useEffect(() => setTerm(q), [q]);
+  useEffect(() => {
+    setTerm(q);
+    setOnline([]);
+    automaticSearchKey.current = "";
+  }, [q, scope, manufacturerId]);
 
   const manufacturers = useQuery({
     queryKey: ["manufacturers"],
@@ -107,6 +112,14 @@ function SearchPage() {
     },
     onError: (error: Error) => toast.error(error.message),
   });
+
+  useEffect(() => {
+    if (!q || local.data?.total !== 0 || onlineSearch.isPending) return;
+    const key = `${q}|${scope}|${manufacturerId}`;
+    if (automaticSearchKey.current === key) return;
+    automaticSearchKey.current = key;
+    onlineSearch.mutate();
+  }, [q, scope, manufacturerId, local.data?.total, onlineSearch.isPending]);
 
   const saveSearch = useMutation({
     mutationFn: () =>
