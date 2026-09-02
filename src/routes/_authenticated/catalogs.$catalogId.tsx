@@ -40,6 +40,10 @@ import { pdfAnalysisService } from "@/services/pdf/pdfAnalysisService";
 import { buildCatalogPath, fileStorageService } from "@/services/storage/fileStorageService";
 
 export const Route = createFileRoute("/_authenticated/catalogs/$catalogId")({
+  validateSearch: (search: Record<string, unknown>) => {
+    const raw = Number(search["page"]);
+    return { page: Number.isFinite(raw) && raw > 0 ? Math.trunc(raw) : undefined };
+  },
   head: () => ({
     meta: [
       { title: "عرض الكتالوج | GCRB Equipment Catalog" },
@@ -55,6 +59,7 @@ export const Route = createFileRoute("/_authenticated/catalogs/$catalogId")({
 
 function CatalogPage() {
   const { catalogId } = Route.useParams();
+  const { page: requestedPage } = Route.useSearch();
   const { t, locale } = useI18n();
   const { user } = useSession();
   const access = useAccess(user?.id);
@@ -67,7 +72,7 @@ function CatalogPage() {
   const [sectionQuery, setSectionQuery] = useState("");
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [pageSearchTerm, setPageSearchTerm] = useState("");
-  const [viewerPage, setViewerPage] = useState<number | null>(null);
+  const [viewerPage, setViewerPage] = useState<number | null>(requestedPage ?? null);
 
   const pageHits = useQuery({
     queryKey: ["catalog-pages", catalogId, pageSearchTerm],
