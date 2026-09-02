@@ -88,22 +88,25 @@ export const catalogRepository = {
   },
 
   async listOrgModelNames(): Promise<string[]> {
-    const { data: assets, error: assetError } = await supabase
-      .from("machine_assets")
-      .select("machine_model_id");
-    if (assetError) throw new Error(assetError.message);
-    const ids = [
-      ...new Set(
-        (assets ?? []).map((a) => a.machine_model_id).filter((id): id is string => Boolean(id)),
-      ),
+    // The inventory workbook is represented by active machine_models. Include
+    // registered aliases so a book labelled D155-1 also matches DRP150-1,2.
+    const [models, aliases] = await Promise.all([
+      supabase.from("machine_models").select("model_name").eq("active", true).order("model_name"),
+      supabase
+        .from("machine_aliases")
+        .select("alias, machine_model:machine_models!inner(active)")
+        .eq("machine_model.active", true),
+    ]);
+    if (models.error) throw new Error(models.error.message);
+    if (aliases.error) throw new Error(aliases.error.message);
+    return [
+      ...new Set([
+        ...(models.data ?? []).map((model) => model.model_name),
+        ...(aliases.data ?? [])
+          .map((alias) => alias.alias)
+          .filter((alias): alias is string => Boolean(alias)),
+      ]),
     ];
-    if (ids.length === 0) return [];
-    const { data, error } = await supabase
-      .from("machine_models")
-      .select("model_name")
-      .in("id", ids);
-    if (error) throw new Error(error.message);
-    return [...new Set((data ?? []).map((m) => m.model_name))];
   },
 
   async listEquipmentTypes(includeInactive = false): Promise<EquipmentType[]> {
