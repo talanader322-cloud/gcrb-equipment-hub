@@ -50,14 +50,20 @@ function sourceSearchUrl(
   return baseUrl;
 }
 
+/** Purely numeric part numbers arrive parsed as numbers, so coerce to text. */
+function asSearchText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return "";
+}
+
 export const Route = createFileRoute("/_authenticated/search")({
   validateSearch: (search: Record<string, unknown>) => ({
-    q: typeof search["q"] === "string" ? (search["q"] as string) : "",
+    q: asSearchText(search["q"]),
     scope: SCOPES.includes(search["scope"] as SearchScope)
       ? (search["scope"] as SearchScope)
       : ("all" as SearchScope),
-    manufacturerId:
-      typeof search["manufacturerId"] === "string" ? (search["manufacturerId"] as string) : "",
+    manufacturerId: asSearchText(search["manufacturerId"]),
   }),
   head: () => ({
     meta: [
