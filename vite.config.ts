@@ -10,9 +10,9 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 // values into Vite's client bundle when a deployment omits their VITE_* aliases.
 // These are intentionally public connection values; the service-role key is
 // never exposed here.
-const clientSupabaseUrl = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL;
+const clientSupabaseUrl = process.env["VITE_SUPABASE_URL"] ?? process.env["SUPABASE_URL"];
 const clientSupabasePublishableKey =
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY;
+  process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_PUBLISHABLE_KEY"];
 
 export default defineConfig({
   vite: {
