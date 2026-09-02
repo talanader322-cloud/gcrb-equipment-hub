@@ -1012,6 +1012,9 @@ export const ar: Record<TranslationKey, string> = {
   "scheme.noDiagram": "لا يوجد رسم لهذه الصفحة",
   "scheme.pages": "الرسوم",
   "scheme.openInBrowser": "فتح الصفحة الكاملة على 777parts",
+  "search.groupSchematicParts": "أرقام القطع داخل رسوم الكتالوجات",
+  "search.schematicHint":
+    "مفهرسة مباشرة من الرسوم التفجيرية — فتح أي نتيجة ينقلك إلى صفحة الرسم المطلوبة تحديدًا.",
 };
 
 export const dictionary = { en, ar } as {
