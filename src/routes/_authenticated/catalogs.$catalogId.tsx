@@ -40,9 +40,9 @@ import { pdfAnalysisService } from "@/services/pdf/pdfAnalysisService";
 import { buildCatalogPath, fileStorageService } from "@/services/storage/fileStorageService";
 
 export const Route = createFileRoute("/_authenticated/catalogs/$catalogId")({
-  validateSearch: (search: Record<string, unknown>) => {
+  validateSearch: (search: Record<string, unknown>): { page?: number } => {
     const raw = Number(search["page"]);
-    return { page: Number.isFinite(raw) && raw > 0 ? Math.trunc(raw) : undefined };
+    return Number.isFinite(raw) && raw > 0 ? { page: Math.trunc(raw) } : {};
   },
   head: () => ({
     meta: [
