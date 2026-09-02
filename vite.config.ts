@@ -6,27 +6,26 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-// Lovable Cloud always provides the server-side bindings. Mirror the two public
-// values into Vite's client bundle when a deployment omits their VITE_* aliases.
-// These are intentionally public connection values; the service-role key is
-// never exposed here.
-const clientSupabaseUrl = process.env["VITE_SUPABASE_URL"] ?? process.env["SUPABASE_URL"];
+// Browser bundles cannot read runtime-only server bindings. Prefer injected
+// build values, then fall back to this project's public Cloud connection
+// values so a production build can always initialize auth. These values are
+// intentionally public; the service-role key is never exposed here.
+const clientSupabaseUrl =
+  process.env["VITE_SUPABASE_URL"] ??
+  process.env["SUPABASE_URL"] ??
+  "https://urmjmkwtndclmbkkjziq.supabase.co";
 const clientSupabasePublishableKey =
-  process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_PUBLISHABLE_KEY"];
+  process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ??
+  process.env["SUPABASE_PUBLISHABLE_KEY"] ??
+  "sb_publishable_CmhEXreZZgWQBVz8Azl7hA_yPxlmgWb";
 
 export default defineConfig({
   vite: {
     define: {
-      ...(clientSupabaseUrl
-        ? { "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(clientSupabaseUrl) }
-        : {}),
-      ...(clientSupabasePublishableKey
-        ? {
-            "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
-              clientSupabasePublishableKey,
-            ),
-          }
-        : {}),
+      "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(clientSupabaseUrl),
+      "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
+        clientSupabasePublishableKey,
+      ),
     },
   },
   tanstackStart: {
