@@ -373,7 +373,7 @@ function CatalogPage() {
       )}
 
       {schemes.length > 0 ? (
-        <SchematicViewer catalog={row} schemes={schemes} />
+        <SchematicViewer catalog={row} schemes={schemes} initialPage={viewerPage} />
       ) : (
         <div className="grid min-h-[72vh] gap-3 xl:grid-cols-[280px_minmax(0,1fr)_310px]">
           <Card className="overflow-hidden">
