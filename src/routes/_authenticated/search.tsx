@@ -291,6 +291,38 @@ function SearchPage() {
         </ResultGroup>
       )}
 
+      {results && results.schematicParts.length > 0 && (
+        <ResultGroup title={t("search.groupSchematicParts")}>
+          <p className="text-xs text-muted-foreground">{t("search.schematicHint")}</p>
+          {results.schematicParts.map((row) => (
+            <Link
+              key={row.scheme_part_id}
+              to="/catalogs/$catalogId"
+              params={{ catalogId: row.catalog_id }}
+              search={{ page: row.page_number }}
+              className="block rounded-md border border-border p-3 hover:bg-accent/60"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-mono text-sm font-semibold" dir="ltr">
+                  {row.number || row.short_number || "—"}
+                </p>
+                {row.model_name && <Badge variant="secondary">{row.model_name}</Badge>}
+                <Badge variant="outline">
+                  {t("catalog.page")} {row.page_number}
+                </Badge>
+              </div>
+              <p className="truncate text-xs text-muted-foreground">
+                {row.name ?? "—"} · {row.scheme_title ?? row.catalog_title}
+              </p>
+              <p className="truncate font-mono text-[11px] text-muted-foreground">
+                {row.manufacturer_name} · {row.catalog_title}
+                {row.item_ref ? ` · ${t("scheme.item")} ${row.item_ref}` : ""}
+              </p>
+            </Link>
+          ))}
+        </ResultGroup>
+      )}
+
       {results && results.catalogs.length > 0 && (
         <ResultGroup title={t("search.groupCatalogs")}>
           {results.catalogs.map((row) => (

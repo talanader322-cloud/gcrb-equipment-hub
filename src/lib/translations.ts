@@ -513,6 +513,9 @@ export const en = {
   "scheme.noDiagram": "No diagram for this page",
   "scheme.pages": "Schemes",
   "scheme.openInBrowser": "Open full page on 777parts",
+  "search.groupSchematicParts": "Part numbers inside catalog diagrams",
+  "search.schematicHint":
+    "Indexed directly from exploded diagrams — opening a result jumps to the exact diagram page.",
 } as const;
 
 export type TranslationKey = keyof typeof en;
