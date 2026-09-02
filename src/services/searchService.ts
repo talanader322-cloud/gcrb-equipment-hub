@@ -174,8 +174,8 @@ async function searchCatalogSchemeParts(
 ): Promise<CatalogSchemePartSearchResult[]> {
   const { data, error } = await supabase.rpc("search_catalog_scheme_parts", {
     p_query: raw,
-    p_manufacturer_id: filters.manufacturerId ?? null,
-    p_machine_model_id: filters.machineModelId ?? null,
+    ...(filters.manufacturerId ? { p_manufacturer_id: filters.manufacturerId } : {}),
+    ...(filters.machineModelId ? { p_machine_model_id: filters.machineModelId } : {}),
   });
   if (error) throw new Error(error.message);
   return data ?? [];
