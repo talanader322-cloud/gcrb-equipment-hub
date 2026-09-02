@@ -175,17 +175,23 @@ function SchemePartsTable({ parts, t }: { parts: CatalogSchemePart[] } & I18n) {
 function SchematicViewerInner({
   catalog,
   schemes,
+  initialPage,
 }: {
   catalog: SchematicCatalog;
   schemes: SchemeRow[];
+  initialPage?: number | null;
 }) {
   const { t, locale } = useI18n();
-  const [selectedPage, setSelectedPage] = useState<number | null>(null);
+  const [selectedPage, setSelectedPage] = useState<number | null>(initialPage ?? null);
   const [schemeFilter, setSchemeFilter] = useState("");
   const [offlinePages, setOfflinePages] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
   const [saveProgress, setSaveProgress] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    if (typeof initialPage === "number") setSelectedPage(initialPage);
+  }, [initialPage]);
 
   const selected =
     schemes.find((scheme) => scheme.page_number === selectedPage) ??
@@ -441,9 +447,13 @@ function SchematicViewerInner({
 export function SchematicViewer({
   catalog,
   schemes,
+  initialPage,
 }: {
   catalog: SchematicCatalog;
   schemes: SchemeRow[];
+  initialPage?: number | null;
 }) {
-  return <SchematicViewerInner catalog={catalog} schemes={schemes} />;
+  return (
+    <SchematicViewerInner catalog={catalog} schemes={schemes} initialPage={initialPage ?? null} />
+  );
 }

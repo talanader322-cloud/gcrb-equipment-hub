@@ -513,6 +513,9 @@ export const en = {
   "scheme.noDiagram": "No diagram for this page",
   "scheme.pages": "Schemes",
   "scheme.openInBrowser": "Open full page on 777parts",
+  "search.groupSchematicParts": "Part numbers inside catalog diagrams",
+  "search.schematicHint":
+    "Indexed directly from exploded diagrams — opening a result jumps to the exact diagram page.",
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -1009,6 +1012,9 @@ export const ar: Record<TranslationKey, string> = {
   "scheme.noDiagram": "لا يوجد رسم لهذه الصفحة",
   "scheme.pages": "الرسوم",
   "scheme.openInBrowser": "فتح الصفحة الكاملة على 777parts",
+  "search.groupSchematicParts": "أرقام القطع داخل رسوم الكتالوجات",
+  "search.schematicHint":
+    "مفهرسة مباشرة من الرسوم التفجيرية — فتح أي نتيجة ينقلك إلى صفحة الرسم المطلوبة تحديدًا.",
 };
 
 export const dictionary = { en, ar } as {

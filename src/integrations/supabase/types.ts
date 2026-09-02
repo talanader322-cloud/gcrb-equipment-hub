@@ -1690,6 +1690,34 @@ export type Database = {
           relevance: number
         }[]
       }
+      search_catalog_scheme_parts: {
+        Args: {
+          p_machine_model_id?: string
+          p_manufacturer_id?: string
+          p_query: string
+        }
+        Returns: {
+          catalog_id: string
+          catalog_number: string
+          catalog_title: string
+          image_storage_path: string
+          image_url: string
+          item_ref: string
+          machine_model_id: string
+          manufacturer_id: string
+          manufacturer_name: string
+          match_rank: number
+          model_name: string
+          name: string
+          number: string
+          page_number: number
+          quantity: string
+          scheme_id: string
+          scheme_part_id: string
+          scheme_title: string
+          short_number: string
+        }[]
+      }
       search_serial_model_ids: {
         Args: {
           p_equipment_type_id?: string
