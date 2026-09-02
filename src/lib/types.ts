@@ -77,6 +77,9 @@ export type PartResult = Part & {
   manufacturer: Pick<Manufacturer, "id" | "name" | "slug"> | null;
 };
 
+export type CatalogSchemePartSearchResult =
+  Database["public"]["Functions"]["search_catalog_scheme_parts"]["Returns"][number];
+
 export type CatalogResult = Catalog & {
   manufacturer: Pick<Manufacturer, "id" | "name" | "slug"> | null;
   machine_model: Pick<MachineModel, "id" | "model_name"> | null;
@@ -112,6 +115,7 @@ export type LocalSearchResults = {
   normalizedQuery: string;
   models: ModelResult[];
   parts: PartResult[];
+  schematicParts: CatalogSchemePartSearchResult[];
   catalogs: CatalogResult[];
   assemblies: AssemblyResult[];
   total: number;

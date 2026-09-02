@@ -3,6 +3,7 @@ import { normalizeCode, normalizeText } from "@/lib/normalize";
 import type {
   AssemblyResult,
   CatalogResult,
+  CatalogSchemePartSearchResult,
   LocalSearchResults,
   ModelResult,
   PartResult,
@@ -167,6 +168,19 @@ async function searchParts(
   return ranked.filter((p) => allowed.has(p.id));
 }
 
+async function searchCatalogSchemeParts(
+  raw: string,
+  filters: SearchFilters,
+): Promise<CatalogSchemePartSearchResult[]> {
+  const { data, error } = await supabase.rpc("search_catalog_scheme_parts", {
+    p_query: raw,
+    p_manufacturer_id: filters.manufacturerId ?? null,
+    p_machine_model_id: filters.machineModelId ?? null,
+  });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 async function searchCatalogs(
   raw: string,
   code: string,
@@ -222,6 +236,7 @@ export const searchService = {
       normalizedQuery: code,
       models: [],
       parts: [],
+      schematicParts: [],
       catalogs: [],
       assemblies: [],
       total: 0,
@@ -229,9 +244,10 @@ export const searchService = {
     if (!raw) return empty;
 
     const wants = (s: SearchScope) => scope === "all" || scope === s;
-    const [models, parts, catalogs, assemblies] = await Promise.all([
+    const [models, parts, schematicParts, catalogs, assemblies] = await Promise.all([
       wants("models") ? searchModels(raw, code, filters) : Promise.resolve([]),
       wants("parts") ? searchParts(raw, code, filters) : Promise.resolve([]),
+      wants("parts") ? searchCatalogSchemeParts(raw, filters) : Promise.resolve([]),
       wants("catalogs") ? searchCatalogs(raw, code, filters) : Promise.resolve([]),
       wants("assemblies") ? searchAssemblies(raw) : Promise.resolve([]),
     ]);
@@ -241,9 +257,11 @@ export const searchService = {
       normalizedQuery: code,
       models,
       parts,
+      schematicParts,
       catalogs,
       assemblies,
-      total: models.length + parts.length + catalogs.length + assemblies.length,
+      total:
+        models.length + parts.length + schematicParts.length + catalogs.length + assemblies.length,
     };
   },
 };
