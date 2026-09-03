@@ -253,7 +253,19 @@ function KomatsuBooksImporterView() {
 
   const scanned = books ?? [];
   const filterActive = filter.trim().length > 0;
+  // Phase 3: when "only my equipment" is on, the visible list is restricted to
+  // the organisation's registered models/aliases, so an operator never pulls
+  // books that do not belong to the 46 machines in service.
+  const orgKeys = (myModels.data ?? []).map((name) => normalizeKeys(name)).filter(Boolean);
+  const orgFilterActive = onlyMine && orgKeys.length > 0;
+  const matchesOrg = (b: KomatsuBookRef) => {
+    const m = meta[b.book];
+    if (!m) return false;
+    const haystack = `${normalizeKeys(m.title)} ${normalizeKeys(m.text)}`;
+    return orgKeys.some((key) => haystack.includes(key));
+  };
   const filtered = scanned.filter((b) => {
+    if (orgFilterActive && !matchesOrg(b)) return false;
     if (!filterActive) return true;
     const q = normalizeKeys(filter);
     if (!q) return true;
@@ -264,7 +276,7 @@ function KomatsuBooksImporterView() {
   });
   const importedMap = imported.data;
   const allPendingCount = scanned.filter((b) => !importedMap?.has(`kbp_json:${b.book}`)).length;
-  const emptyFilter = filterActive && filtered.length === 0;
+  const emptyFilter = (filterActive || orgFilterActive) && filtered.length === 0;
   const resolvedCount = scanned.filter((b) => meta[b.book]).length;
   const unresolvedCount = scanned.length - resolvedCount;
 
@@ -352,10 +364,12 @@ function KomatsuBooksImporterView() {
                 <Button
                   size="sm"
                   disabled={!access.data?.canManageCatalog || !komatsu.data || scanned.length === 0}
-                  onClick={() => runImport.mutate(scanned)}
+                  onClick={() => runImport.mutate(orgFilterActive ? filtered : scanned)}
                 >
                   <Play className="me-2 size-4" />
-                  {filterActive ? t("books.importAllScanned") : t("books.importAll")}
+                  {filterActive || orgFilterActive
+                    ? t("books.importAllScanned")
+                    : t("books.importAll")}
                   {allPendingCount > 0 && ` (${allPendingCount})`}
                 </Button>
               </div>

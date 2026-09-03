@@ -226,6 +226,21 @@ function PartPage() {
                       {item.match_pct}%
                     </Badge>
                   </div>
+                  <div
+                    className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                    role="presentation"
+                  >
+                    <div
+                      className={
+                        item.match_pct >= 90
+                          ? "h-full rounded-full bg-primary"
+                          : item.match_pct >= 70
+                            ? "h-full rounded-full bg-amber-500"
+                            : "h-full rounded-full bg-muted-foreground"
+                      }
+                      style={{ width: `${Math.max(0, Math.min(100, item.match_pct))}%` }}
+                    />
+                  </div>
                   <p className="mt-1 truncate text-xs text-muted-foreground">
                     {item.description ?? "—"} · {item.manufacturer_name}
                   </p>
