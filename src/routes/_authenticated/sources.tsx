@@ -284,6 +284,40 @@ function SourcesPage() {
                     {source.last_error}
                   </p>
                 )}
+                {config.mode === "manual_archive" && (
+                  <div className="space-y-2 rounded-md border border-border bg-muted/40 p-3">
+                    <p className="font-medium text-foreground">
+                      {locale === "ar"
+                        ? "مصدر أرشفة يدوية موثّقة (CSS / LinkOne)"
+                        : "Documented manual-archive source (CSS / LinkOne)"}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {locale === "ar"
+                        ? "قاعدة كوماتسو المخزنة في ميجا هي برنامج ويندوز مغلق (CSS 5.11 + قاعدة EPC ≈13.3 جيجابايت)، فلا يمكن البحث فيها من الخادم أو المتصفح ولا يُفكّ محتواها آليًا. المسار المعتمد هو التصدير اليدوي ثم الأرشفة داخل النظام."
+                        : "The Komatsu database stored on Mega is a closed Windows product (CSS 5.11 + an ~13.3 GB EPC database). It cannot be queried from the server or browser and is never unpacked automatically. The approved path is a manual export followed by in-app archiving."}
+                    </p>
+                    <ol className="list-inside list-decimal space-y-1 text-muted-foreground">
+                      {(locale === "ar"
+                        ? [
+                            "ثبّت CSS 5.11 وقاعدة EPC على جهاز ويندوز من نسختك في ميجا.",
+                            "افتح كتالوج المعدة المطلوبة واختر الطبع/التصدير إلى PDF.",
+                            "احفظ الملف باسم يحتوي الموديل والرقم التسلسلي إن وُجد.",
+                            "افتح «مركز الاستيراد ← إضافة معدة جديدة» وارفع الملفات؛ يتحقق النظام من نوع الملف وبصمة SHA-256 ويؤرشفها ذرّيًا.",
+                            "بعد الأرشفة يصبح الكتالوج متاحًا للبحث والعمل دون إنترنت لكل المستخدمين.",
+                          ]
+                        : [
+                            "Install CSS 5.11 and the EPC database on a Windows machine from your Mega copy.",
+                            "Open the required machine catalog and use Print/Export to PDF.",
+                            "Name the file with the model and, when known, the serial number.",
+                            "Open Import Center → New Equipment and upload the files; the system validates the file type and SHA-256 and archives them atomically.",
+                            "Once archived, the catalog is searchable and available offline to every user.",
+                          ]
+                      ).map((step) => (
+                        <li key={step}>{step}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2 pt-2">
                   {source.base_url && (
                     <Button size="sm" variant="outline" asChild>
