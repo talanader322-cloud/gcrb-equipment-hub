@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useI18n } from "@/lib/i18n";
+import { normalizeCode } from "@/lib/normalize";
 import type { CatalogScheme, CatalogSchemePart } from "@/lib/types";
 import { offlineSchemesService } from "@/services/offline/offlineSchemesService";
 import { intelligenceRepository } from "@/services/repositories/intelligenceRepository";
