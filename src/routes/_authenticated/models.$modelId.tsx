@@ -80,6 +80,8 @@ function ModelPage() {
           <div className="relative border-b border-border bg-muted/40 md:border-b-0 md:border-e">
             {row.image_url ? (
               <img
+          loading="lazy"
+          decoding="async"
                 src={row.image_url}
                 alt={row.model_name}
                 className="aspect-[4/3] size-full object-cover md:aspect-auto"
