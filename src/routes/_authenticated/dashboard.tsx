@@ -1,11 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Boxes, FileStack, Factory, Globe2, Wrench } from "lucide-react";
+import {
+  Boxes,
+  Clock,
+  Download,
+  Factory,
+  FileStack,
+  Globe2,
+  HardHat,
+  Import,
+  Search,
+  Star,
+  Wrench,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/lib/i18n";
+import type { TranslationKey } from "@/lib/translations";
 import { catalogRepository } from "@/services/repositories/catalogRepository";
 import { personalRepository } from "@/services/repositories/personalRepository";
 
@@ -22,6 +35,20 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   }),
   component: Dashboard,
 });
+
+const QUICK_ACTIONS: { to: string; labelKey: TranslationKey; icon: typeof Search }[] = [
+  { to: "/search", labelKey: "nav.search", icon: Search },
+  { to: "/manufacturers", labelKey: "nav.manufacturers", icon: Factory },
+  { to: "/equipment", labelKey: "nav.equipment", icon: Boxes },
+  { to: "/assets", labelKey: "nav.assets", icon: HardHat },
+  { to: "/catalogs", labelKey: "nav.catalogs", icon: FileStack },
+  { to: "/parts", labelKey: "nav.parts", icon: Wrench },
+  { to: "/sources", labelKey: "nav.onlineSources", icon: Globe2 },
+  { to: "/import", labelKey: "nav.importCenter", icon: Import },
+  { to: "/favorites", labelKey: "nav.favorites", icon: Star },
+  { to: "/recent", labelKey: "nav.recent", icon: Clock },
+  { to: "/downloads", labelKey: "nav.downloads", icon: Download },
+];
 
 function Dashboard() {
   const { t } = useI18n();
@@ -43,7 +70,7 @@ function Dashboard() {
   const cards = [
     { key: "dash.manufacturers" as const, value: stats.data?.manufacturers, icon: Factory },
     { key: "dash.equipmentTypes" as const, value: stats.data?.equipmentTypes, icon: Boxes },
-    { key: "dash.models" as const, value: stats.data?.models, icon: Boxes },
+    { key: "dash.models" as const, value: stats.data?.models, icon: HardHat },
     { key: "dash.catalogs" as const, value: stats.data?.catalogs, icon: FileStack },
     { key: "dash.parts" as const, value: stats.data?.parts, icon: Wrench },
     { key: "dash.onlineSources" as const, value: stats.data?.enabledSources, icon: Globe2 },
@@ -51,28 +78,47 @@ function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("dash.title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("dash.subtitle")}</p>
-      </div>
+      <section className="relative overflow-hidden rounded-md border border-border bg-header px-5 py-6 text-header-foreground shadow-raised">
+        <div className="hazard-stripe absolute inset-x-0 top-0 h-1.5" aria-hidden />
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight">{t("dash.title")}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-header-foreground/70">{t("dash.subtitle")}</p>
+      </section>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {cards.map((card) => (
-          <Card key={card.key}>
-            <CardContent className="space-y-1 p-4">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-medium">{t(card.key)}</span>
+          <div key={card.key} className="tile">
+            <div className="flex items-center justify-between">
+              <span className="label-caps">{t(card.key)}</span>
+              <span className="flex size-8 items-center justify-center rounded-md bg-primary/15 text-primary">
                 <card.icon className="size-4" />
-              </div>
-              {stats.isLoading ? (
-                <Skeleton className="h-7 w-14" />
-              ) : (
-                <p className="font-mono text-2xl font-semibold">{card.value ?? 0}</p>
-              )}
-            </CardContent>
-          </Card>
+              </span>
+            </div>
+            {stats.isLoading ? (
+              <Skeleton className="h-7 w-14" />
+            ) : (
+              <p className="font-mono text-2xl font-semibold tabular-nums">{card.value ?? 0}</p>
+            )}
+          </div>
         ))}
       </div>
+
+      <section className="space-y-3">
+        <h2 className="label-caps">{t("dash.quickAccess")}</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+          {QUICK_ACTIONS.map((action) => (
+            <Link
+              key={action.to}
+              to={action.to}
+              className="tile items-center justify-center gap-3 py-6 text-center"
+            >
+              <span className="flex size-12 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-amber">
+                <action.icon className="size-6" />
+              </span>
+              <span className="text-sm font-semibold leading-tight">{t(action.labelKey)}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
@@ -89,13 +135,18 @@ function Dashboard() {
                 key={row.id}
                 to="/catalogs/$catalogId"
                 params={{ catalogId: row.id }}
-                className="flex items-center justify-between rounded-md border border-border p-3 transition-colors hover:bg-accent/60"
+                className="flex items-center justify-between gap-3 rounded-md border border-border p-3 transition-colors hover:border-primary hover:bg-accent/50"
               >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{row.title}</p>
-                  <p className="truncate font-mono text-xs text-muted-foreground">
-                    {row.catalog_number ?? "—"} · {row.manufacturer?.name}
-                  </p>
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
+                    <FileStack className="size-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{row.title}</p>
+                    <p className="truncate font-mono text-xs text-muted-foreground">
+                      {row.catalog_number ?? "—"} · {row.manufacturer?.name}
+                    </p>
+                  </div>
                 </div>
                 <Badge variant="outline">{t(`catalogType.${row.catalog_type}` as never)}</Badge>
               </Link>
