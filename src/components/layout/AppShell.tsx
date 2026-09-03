@@ -86,8 +86,8 @@ function SidebarNav({
   isAdmin,
 }: {
   collapsed: boolean;
-  onNavigate?: () => void;
-  isAdmin?: boolean;
+  onNavigate?: (() => void) | undefined;
+  isAdmin?: boolean | undefined;
 }) {
   const { t, dir } = useI18n();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
