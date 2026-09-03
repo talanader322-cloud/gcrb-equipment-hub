@@ -15,6 +15,7 @@ import {
   Globe2,
   Import,
   LogOut,
+  Menu,
   Moon,
   Search,
   Shield,
@@ -22,12 +23,14 @@ import {
   Sun,
   Wrench,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess, useSession } from "@/hooks/useSession";
 import { useI18n } from "@/lib/i18n";
@@ -36,6 +39,8 @@ import { cn } from "@/lib/utils";
 import type { TranslationKey } from "@/lib/translations";
 
 type NavItem = { to: string; labelKey: TranslationKey; icon: typeof Gauge };
+
+const COLLAPSE_KEY = "gcrb.sidebar.collapsed";
 
 const CATALOG_NAV: NavItem[] = [
   { to: "/dashboard", labelKey: "nav.dashboard", icon: Gauge },
@@ -58,6 +63,115 @@ const PERSONAL_NAV: NavItem[] = [
   { to: "/downloads", labelKey: "nav.downloads", icon: Download },
 ];
 
+function Brand({ compact }: { compact?: boolean }) {
+  const { t } = useI18n();
+  return (
+    <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
+      <div className="flex size-9 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+        <Database className="size-5" />
+      </div>
+      {!compact && (
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-sidebar-foreground">{t("app.name")}</p>
+          <p className="truncate text-[11px] text-sidebar-foreground/60">{t("app.org")}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SidebarNav({
+  collapsed,
+  onNavigate,
+  isAdmin,
+}: {
+  collapsed: boolean;
+  onNavigate?: () => void;
+  isAdmin?: boolean;
+}) {
+  const { t, dir } = useI18n();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  const systemNav: NavItem[] = [
+    ...(isAdmin
+      ? [{ to: "/admin", labelKey: "nav.administration" as TranslationKey, icon: Shield }]
+      : []),
+    { to: "/settings", labelKey: "nav.settings", icon: Cog },
+  ];
+
+  const groups: { titleKey: TranslationKey; items: NavItem[] }[] = [
+    { titleKey: "nav.catalogSection", items: CATALOG_NAV },
+    { titleKey: "nav.dataSection", items: DATA_NAV },
+    { titleKey: "nav.personalSection", items: PERSONAL_NAV },
+    { titleKey: "nav.systemSection", items: systemNav },
+  ];
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <nav className="flex-1 space-y-5 overflow-y-auto px-2 py-4">
+        {groups.map((group) => (
+          <div key={group.titleKey}>
+            {collapsed ? (
+              <div className="mx-3 mb-2 h-px bg-sidebar-border" />
+            ) : (
+              <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-sidebar-foreground/45">
+                {t(group.titleKey)}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
+                const Icon = item.icon;
+                const link = (
+                  <Link
+                    to={item.to}
+                    onClick={onNavigate}
+                    className={cn(
+                      "group relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+                      collapsed && "justify-center px-0",
+                      active
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                    )}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    <span
+                      className={cn(
+                        "absolute inset-y-1 w-[3px] rounded-full bg-sidebar-primary transition-opacity",
+                        dir === "rtl" ? "end-0" : "start-0",
+                        active ? "opacity-100" : "opacity-0",
+                      )}
+                      aria-hidden
+                    />
+                    <Icon
+                      className={cn(
+                        "size-4 shrink-0 transition-colors",
+                        active ? "text-sidebar-primary" : "text-sidebar-foreground/60",
+                        "group-hover:text-sidebar-primary",
+                      )}
+                    />
+                    {!collapsed && <span className="truncate">{t(item.labelKey)}</span>}
+                  </Link>
+                );
+
+                if (!collapsed) return <div key={item.to}>{link}</div>;
+                return (
+                  <Tooltip key={item.to}>
+                    <TooltipTrigger asChild>{link}</TooltipTrigger>
+                    <TooltipContent side={dir === "rtl" ? "left" : "right"}>
+                      {t(item.labelKey)}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </nav>
+    </TooltipProvider>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { t, locale, toggleLocale, dir } = useI18n();
   const { theme, toggleTheme } = useTheme();
@@ -66,8 +180,20 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [term, setTerm] = useState("");
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  useEffect(() => {
+    setCollapsed(window.localStorage.getItem(COLLAPSE_KEY) === "1");
+  }, []);
+
+  function toggleCollapsed() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      window.localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
+      return next;
+    });
+  }
 
   const sources = useQuery({
     queryKey: ["sources-status"],
@@ -95,84 +221,28 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/search", search: { q, scope: "all", manufacturerId: "" } });
   }
 
-  const systemNav: NavItem[] = [
-    ...(access.data?.isAdmin
-      ? [{ to: "/admin", labelKey: "nav.administration" as TranslationKey, icon: Shield }]
-      : []),
-    { to: "/settings", labelKey: "nav.settings", icon: Cog },
-  ];
-
-  const groups: { titleKey: TranslationKey; items: NavItem[] }[] = [
-    { titleKey: "nav.catalogSection", items: CATALOG_NAV },
-    { titleKey: "nav.dataSection", items: DATA_NAV },
-    { titleKey: "nav.personalSection", items: PERSONAL_NAV },
-    { titleKey: "nav.systemSection", items: systemNav },
-  ];
-
   return (
     <div className="flex min-h-screen bg-background" dir={dir}>
       <aside
         className={cn(
-          "hidden shrink-0 flex-col border-e border-sidebar-border bg-sidebar md:flex",
-          collapsed ? "w-[68px]" : "w-72",
+          "hidden shrink-0 flex-col border-e border-sidebar-border bg-sidebar transition-[width] duration-200 md:flex",
+          collapsed ? "w-[72px]" : "w-72",
         )}
       >
-        <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
-          <div className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Database className="size-5" />
-          </div>
-          {!collapsed && (
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-sidebar-foreground">
-                {t("app.name")}
-              </p>
-              <p className="truncate text-[11px] text-muted-foreground">{t("app.org")}</p>
-            </div>
-          )}
-        </div>
-
-        <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-4">
-          {groups.map((group) => (
-            <div key={group.titleKey}>
-              {!collapsed && (
-                <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t(group.titleKey)}
-                </p>
-              )}
-              <div className="space-y-1">
-                {group.items.map((item) => {
-                  const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                        active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60",
-                      )}
-                      title={t(item.labelKey)}
-                    >
-                      <Icon className="size-4 shrink-0" />
-                      {!collapsed && <span className="truncate">{t(item.labelKey)}</span>}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </nav>
-
+        <Brand compact={collapsed} />
+        <SidebarNav collapsed={collapsed} isAdmin={access.data?.isAdmin} />
         <div className="border-t border-sidebar-border p-2">
           <Button
             variant="ghost"
             size="sm"
-            className="w-full justify-start gap-2"
-            onClick={() => setCollapsed((v) => !v)}
+            className={cn(
+              "w-full gap-2 text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+              collapsed ? "justify-center" : "justify-start",
+            )}
+            onClick={toggleCollapsed}
+            aria-label={t("top.collapseSidebar")}
           >
-            {dir === "rtl" ? (
+            {(dir === "rtl") !== collapsed ? (
               <ChevronsRight className="size-4" />
             ) : (
               <ChevronsLeft className="size-4" />
@@ -184,6 +254,27 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-card/95 px-4 backdrop-blur">
+          <div className="hazard-stripe pointer-events-none absolute inset-x-0 bottom-0 h-[3px]" aria-hidden />
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden" aria-label={t("nav.dashboard")}>
+                <Menu className="size-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent
+              side={dir === "rtl" ? "right" : "left"}
+              className="w-72 border-sidebar-border bg-sidebar p-0"
+            >
+              <SheetTitle className="sr-only">{t("app.name")}</SheetTitle>
+              <Brand />
+              <SidebarNav
+                collapsed={false}
+                isAdmin={access.data?.isAdmin}
+                onNavigate={() => setMobileOpen(false)}
+              />
+            </SheetContent>
+          </Sheet>
+
           <form onSubmit={submitSearch} className="relative flex-1 max-w-2xl">
             <Search className="pointer-events-none absolute inset-inline-start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -197,7 +288,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <div className="ms-auto flex items-center gap-2">
             <Badge variant="outline" className="hidden gap-1 sm:flex">
-              <span className="size-2 rounded-full bg-emerald-500" />
+              <span className="size-2 rounded-full bg-success" />
               {t("top.dbOnline")}
             </Badge>
             <Badge variant="secondary" className="hidden sm:flex">
