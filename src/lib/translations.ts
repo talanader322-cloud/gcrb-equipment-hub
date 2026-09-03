@@ -513,6 +513,15 @@ export const en = {
   "scheme.noDiagram": "No diagram for this page",
   "scheme.pages": "Schemes",
   "scheme.openInBrowser": "Open full page on 777parts",
+  "scheme.matched": "match",
+  "scheme.highlightHint": "Highlighting part {number} on this diagram.",
+  "scheme.reset": "Reset zoom",
+  "scheme.prevScheme": "Previous diagram",
+  "scheme.nextScheme": "Next diagram",
+  "model.tabs.schemes": "Exploded diagrams",
+  "model.schemesEmpty": "No indexed diagrams for this model yet.",
+  "model.selectCatalog": "Catalog",
+
   "search.groupSchematicParts": "Part numbers inside catalog diagrams",
   "search.schematicHint":
     "Indexed directly from exploded diagrams — opening a result jumps to the exact diagram page.",
