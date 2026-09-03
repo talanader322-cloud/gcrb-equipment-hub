@@ -276,7 +276,7 @@ function KomatsuBooksImporterView() {
   });
   const importedMap = imported.data;
   const allPendingCount = scanned.filter((b) => !importedMap?.has(`kbp_json:${b.book}`)).length;
-  const emptyFilter = filterActive && filtered.length === 0;
+  const emptyFilter = (filterActive || orgFilterActive) && filtered.length === 0;
   const resolvedCount = scanned.filter((b) => meta[b.book]).length;
   const unresolvedCount = scanned.length - resolvedCount;
 
@@ -364,10 +364,12 @@ function KomatsuBooksImporterView() {
                 <Button
                   size="sm"
                   disabled={!access.data?.canManageCatalog || !komatsu.data || scanned.length === 0}
-                  onClick={() => runImport.mutate(scanned)}
+                  onClick={() => runImport.mutate(orgFilterActive ? filtered : scanned)}
                 >
                   <Play className="me-2 size-4" />
-                  {filterActive ? t("books.importAllScanned") : t("books.importAll")}
+                  {filterActive || orgFilterActive
+                    ? t("books.importAllScanned")
+                    : t("books.importAll")}
                   {allPendingCount > 0 && ` (${allPendingCount})`}
                 </Button>
               </div>
