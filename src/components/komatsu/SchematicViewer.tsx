@@ -123,6 +123,8 @@ function SchemeImage({
     <div className="relative overflow-auto rounded-md border border-border bg-muted/30">
       <a href={state.url} target="_blank" rel="noreferrer">
         <img
+          loading="lazy"
+          decoding="async"
           src={state.url}
           alt={scheme.title ?? `page ${scheme.page_number}`}
           className="mx-auto max-h-[52vh] w-auto origin-center object-contain transition-transform"

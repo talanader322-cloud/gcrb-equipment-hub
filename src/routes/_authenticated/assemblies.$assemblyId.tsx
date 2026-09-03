@@ -107,6 +107,8 @@ function AssemblyPage() {
             {activeDiagram?.image_url ? (
               <div className="relative flex min-h-[58vh] items-center justify-center overflow-auto rounded-md border bg-white p-4">
                 <img
+          loading="lazy"
+          decoding="async"
                   src={activeDiagram.image_url}
                   alt={activeDiagram.title ?? row.title}
                   className="max-h-[68vh] max-w-full object-contain"
