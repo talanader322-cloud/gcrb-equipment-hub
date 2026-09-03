@@ -318,7 +318,12 @@ function SearchPage() {
               key={row.scheme_part_id}
               to="/catalogs/$catalogId"
               params={{ catalogId: row.catalog_id }}
-              search={{ page: row.page_number }}
+              search={{
+                page: row.page_number,
+                ...(row.number || row.short_number
+                  ? { highlight: (row.number || row.short_number) as string }
+                  : {}),
+              }}
               className="block rounded-md border border-border p-3 hover:bg-accent/60"
             >
               <div className="flex flex-wrap items-center gap-2">

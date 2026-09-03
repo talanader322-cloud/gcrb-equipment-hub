@@ -40,9 +40,17 @@ import { pdfAnalysisService } from "@/services/pdf/pdfAnalysisService";
 import { buildCatalogPath, fileStorageService } from "@/services/storage/fileStorageService";
 
 export const Route = createFileRoute("/_authenticated/catalogs/$catalogId")({
-  validateSearch: (search: Record<string, unknown>): { page?: number } => {
+  validateSearch: (search: Record<string, unknown>): { page?: number; highlight?: string } => {
     const raw = Number(search["page"]);
-    return Number.isFinite(raw) && raw > 0 ? { page: Math.trunc(raw) } : {};
+    const highlightRaw = search["highlight"];
+    const highlight =
+      typeof highlightRaw === "string" && highlightRaw.trim().length > 0
+        ? highlightRaw.trim().slice(0, 40)
+        : undefined;
+    return {
+      ...(Number.isFinite(raw) && raw > 0 ? { page: Math.trunc(raw) } : {}),
+      ...(highlight ? { highlight } : {}),
+    };
   },
   head: () => ({
     meta: [
@@ -59,7 +67,7 @@ export const Route = createFileRoute("/_authenticated/catalogs/$catalogId")({
 
 function CatalogPage() {
   const { catalogId } = Route.useParams();
-  const { page: requestedPage } = Route.useSearch();
+  const { page: requestedPage, highlight: requestedHighlight } = Route.useSearch();
   const { t, locale } = useI18n();
   const { user } = useSession();
   const access = useAccess(user?.id);
@@ -373,7 +381,12 @@ function CatalogPage() {
       )}
 
       {schemes.length > 0 ? (
-        <SchematicViewer catalog={row} schemes={schemes} initialPage={viewerPage} />
+        <SchematicViewer
+          catalog={row}
+          schemes={schemes}
+          initialPage={viewerPage}
+          initialHighlight={requestedHighlight ?? null}
+        />
       ) : (
         <div className="grid min-h-[72vh] gap-3 xl:grid-cols-[280px_minmax(0,1fr)_310px]">
           <Card className="overflow-hidden">

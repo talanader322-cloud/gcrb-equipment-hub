@@ -4,6 +4,7 @@ import { BookOpen, Factory, History, Layers, Package, Truck } from "lucide-react
 import { useState } from "react";
 
 import { DiscoveryPanel } from "@/components/discovery/DiscoveryPanel";
+import { SchematicViewer } from "@/components/komatsu/SchematicViewer";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -44,6 +45,7 @@ function ModelPage() {
   const access = useAccess(user?.id);
   const queryClient = useQueryClient();
   const [tab, setTab] = useState("info");
+  const [schemeCatalogId, setSchemeCatalogId] = useState<string | null>(null);
 
   const model = useQuery({
     queryKey: ["model", modelId],
@@ -143,6 +145,7 @@ function ModelPage() {
           <TabsTrigger value="assets">{t("model.tabs.assets")}</TabsTrigger>
           <TabsTrigger value="queries">{t("model.tabs.queries")}</TabsTrigger>
           <TabsTrigger value="catalogs">{t("model.tabs.catalogs")}</TabsTrigger>
+          <TabsTrigger value="schemes">{t("model.tabs.schemes")}</TabsTrigger>
           <TabsTrigger value="parts">{t("model.tabs.parts")}</TabsTrigger>
           <TabsTrigger value="discovery">{t("model.tabs.discovery")}</TabsTrigger>
         </TabsList>
@@ -267,6 +270,18 @@ function ModelPage() {
           ))}
         </TabsContent>
 
+        <TabsContent value="schemes" className="space-y-3">
+          <ModelSchemes
+            catalogs={catalogs.map((catalog) => ({
+              id: catalog.id,
+              title: catalog.title,
+              catalog_number: catalog.catalog_number,
+            }))}
+            selectedId={schemeCatalogId}
+            onSelect={setSchemeCatalogId}
+          />
+        </TabsContent>
+
         <TabsContent value="parts">
           <Card>
             <CardHeader>
@@ -325,6 +340,84 @@ function ModelPage() {
           />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function ModelSchemes({
+  catalogs,
+  selectedId,
+  onSelect,
+}: {
+  catalogs: { id: string; title: string; catalog_number: string | null }[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const { t } = useI18n();
+  const activeId = selectedId ?? catalogs[0]?.id ?? null;
+  const detail = useQuery({
+    queryKey: ["catalog", activeId],
+    enabled: Boolean(activeId),
+    queryFn: () => catalogRepository.getCatalog(activeId!),
+  });
+
+  if (catalogs.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-4 text-sm text-muted-foreground">
+          {t("model.schemesEmpty")}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const schemes = detail.data?.schemes ?? [];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-muted-foreground">{t("model.selectCatalog")}</span>
+        {catalogs.map((catalog) => (
+          <button
+            key={catalog.id}
+            type="button"
+            onClick={() => onSelect(catalog.id)}
+            className={`rounded-md border px-2.5 py-1.5 text-xs ${
+              activeId === catalog.id
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border hover:bg-accent/60"
+            }`}
+          >
+            {catalog.title}
+            {catalog.catalog_number ? (
+              <span className="ms-1 font-mono text-[10px] text-muted-foreground">
+                {catalog.catalog_number}
+              </span>
+            ) : null}
+          </button>
+        ))}
+      </div>
+      {detail.isLoading && <Skeleton className="h-64 w-full" />}
+      {!detail.isLoading && schemes.length === 0 && (
+        <Card>
+          <CardContent className="p-4 text-sm text-muted-foreground">
+            {t("model.schemesEmpty")}
+          </CardContent>
+        </Card>
+      )}
+      {!detail.isLoading && schemes.length > 0 && detail.data && (
+        <SchematicViewer
+          catalog={{
+            id: detail.data.catalog.id,
+            title: detail.data.catalog.title,
+            catalog_number: detail.data.catalog.catalog_number,
+            external_source_url: detail.data.catalog.external_source_url,
+            indexed_page_count: detail.data.catalog.indexed_page_count,
+            manufacturer: detail.data.catalog.manufacturer ?? null,
+          }}
+          schemes={schemes}
+        />
+      )}
     </div>
   );
 }
