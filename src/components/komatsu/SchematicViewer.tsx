@@ -132,12 +132,22 @@ function SchemeImage({
   );
 }
 
-function SchemePartsTable({ parts, t }: { parts: CatalogSchemePart[] } & I18n) {
+function SchemePartsTable({
+  parts,
+  highlight,
+  t,
+}: { parts: CatalogSchemePart[]; highlight?: string | null } & I18n) {
   const sorted = [...parts].sort((a, b) => {
     const na = Number((a.item_ref ?? "").match(/\d+/)?.[0] ?? Infinity);
     const nb = Number((b.item_ref ?? "").match(/\d+/)?.[0] ?? Infinity);
     return na - nb;
   });
+  const target = normalizeCode(highlight);
+  const isMatch = (part: CatalogSchemePart) =>
+    target.length > 0 &&
+    [part.number, part.short_number, part.ref0, part.ref1, part.alt].some(
+      (value) => normalizeCode(value) === target,
+    );
   if (sorted.length === 0) {
     return <p className="p-4 text-center text-xs text-muted-foreground">{t("state.none")}</p>;
   }
@@ -153,24 +163,44 @@ function SchemePartsTable({ parts, t }: { parts: CatalogSchemePart[] } & I18n) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sorted.map((part) => (
-            <TableRow key={part.id}>
-              <TableCell className="font-mono text-xs">{part.item_ref ?? "—"}</TableCell>
-              <TableCell className="font-mono text-xs" dir="ltr">
-                {part.number || part.short_number || "—"}
-                <span className="block font-mono text-[10px] text-muted-foreground" dir="ltr">
-                  {[part.ref0, part.ref1, part.alt].filter(Boolean).join(" · ") || "\u00A0"}
-                </span>
-              </TableCell>
-              <TableCell className="max-w-[240px] text-xs">{part.name ?? "—"}</TableCell>
-              <TableCell className="text-xs">{part.quantity ?? "1"}</TableCell>
-            </TableRow>
-          ))}
+          {sorted.map((part) => {
+            const matched = isMatch(part);
+            return (
+              <TableRow
+                key={part.id}
+                ref={
+                  matched
+                    ? (node) => node?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+                    : undefined
+                }
+                data-matched={matched ? "true" : undefined}
+                className={matched ? "bg-primary/10 outline outline-1 outline-primary/40" : ""}
+              >
+                <TableCell className="font-mono text-xs">
+                  {part.item_ref ?? "—"}
+                  {matched && (
+                    <Badge variant="secondary" className="ms-1 text-[9px]">
+                      {t("scheme.matched")}
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell className="font-mono text-xs" dir="ltr">
+                  {part.number || part.short_number || "—"}
+                  <span className="block font-mono text-[10px] text-muted-foreground" dir="ltr">
+                    {[part.ref0, part.ref1, part.alt].filter(Boolean).join(" · ") || "\u00A0"}
+                  </span>
+                </TableCell>
+                <TableCell className="max-w-[240px] text-xs">{part.name ?? "—"}</TableCell>
+                <TableCell className="text-xs">{part.quantity ?? "1"}</TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </ScrollArea>
   );
 }
+
 
 function SchematicViewerInner({
   catalog,
