@@ -1,5 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, HardDriveDownload, ImageOff, Loader2, Search, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  HardDriveDownload,
+  ImageOff,
+  Loader2,
+  Search,
+  Trash2,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -47,11 +58,13 @@ type I18n = { t: ReturnType<typeof useI18n>["t"]; locale: "ar" | "en" };
 function SchemeImage({
   catalogId,
   scheme,
+  zoom,
   t,
   locale,
 }: {
   catalogId: string;
   scheme: SchemeRow;
+  zoom: number;
 } & I18n) {
   const [state, setState] = useState<{
     url: string | null;
@@ -107,12 +120,13 @@ function SchemeImage({
   }
 
   return (
-    <div className="relative overflow-hidden rounded-md border border-border bg-muted/30">
+    <div className="relative overflow-auto rounded-md border border-border bg-muted/30">
       <a href={state.url} target="_blank" rel="noreferrer">
         <img
           src={state.url}
           alt={scheme.title ?? `page ${scheme.page_number}`}
-          className="mx-auto max-h-[52vh] w-auto object-contain"
+          className="mx-auto max-h-[52vh] w-auto origin-center object-contain transition-transform"
+          style={{ transform: `scale(${zoom})` }}
         />
       </a>
       <Badge
@@ -207,12 +221,15 @@ function SchematicViewerInner({
   catalog,
   schemes,
   initialPage,
+  initialHighlight,
 }: {
   catalog: SchematicCatalog;
   schemes: SchemeRow[];
   initialPage?: number | null;
+  initialHighlight?: string | null;
 }) {
   const { t, locale } = useI18n();
+  const [zoom, setZoom] = useState(1);
   const [selectedPage, setSelectedPage] = useState<number | null>(initialPage ?? null);
   const [schemeFilter, setSchemeFilter] = useState("");
   const [offlinePages, setOfflinePages] = useState<Set<number>>(new Set());
@@ -229,6 +246,14 @@ function SchematicViewerInner({
     schemes.find((scheme) => scheme.image_url || scheme.image_storage_path) ??
     schemes[0] ??
     null;
+
+  const currentIndex = selected
+    ? schemes.findIndex((scheme) => scheme.page_number === selected.page_number)
+    : -1;
+  const goRelative = (delta: number) => {
+    const next = schemes[currentIndex + delta];
+    if (next) setSelectedPage(next.page_number);
+  };
 
   const pageHits = useQuery({
     queryKey: ["catalog-pages", catalog.id, searchTerm],
@@ -327,6 +352,55 @@ function SchematicViewerInner({
               {t("catalog.page")} {selected?.page_number ?? "—"}
             </p>
           </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-8"
+              title={t("scheme.prevScheme")}
+              disabled={currentIndex <= 0}
+              onClick={() => goRelative(-1)}
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-8"
+              title={t("scheme.nextScheme")}
+              disabled={currentIndex < 0 || currentIndex >= schemes.length - 1}
+              onClick={() => goRelative(1)}
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-8"
+              title={t("viewer.zoomOut")}
+              onClick={() => setZoom((value) => Math.max(0.5, Number((value - 0.25).toFixed(2))))}
+            >
+              <ZoomOut className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-8"
+              title={t("viewer.zoomIn")}
+              onClick={() => setZoom((value) => Math.min(4, Number((value + 0.25).toFixed(2))))}
+            >
+              <ZoomIn className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 font-mono text-xs"
+              title={t("scheme.reset")}
+              onClick={() => setZoom(1)}
+            >
+              {Math.round(zoom * 100)}%
+            </Button>
+          </div>
           {catalog.external_source_url && (
             <Button asChild variant="outline" size="sm">
               <a href={catalog.external_source_url} target="_blank" rel="noreferrer">
@@ -339,12 +413,28 @@ function SchematicViewerInner({
         <CardContent className="space-y-3 p-3 pt-0">
           {selected ? (
             <>
-              <SchemeImage catalogId={catalog.id} scheme={selected} t={t} locale={locale} />
+              <SchemeImage
+                catalogId={catalog.id}
+                scheme={selected}
+                zoom={zoom}
+                t={t}
+                locale={locale}
+              />
+              {initialHighlight && (
+                <p className="text-xs text-primary">
+                  {fill(t("scheme.highlightHint"), { number: initialHighlight })}
+                </p>
+              )}
               <div>
                 <p className="mb-1 text-xs font-medium text-muted-foreground">
                   {fill(t("scheme.parts"), { count: String(selected.parts.length) })}
                 </p>
-                <SchemePartsTable parts={selected.parts} t={t} locale={locale} />
+                <SchemePartsTable
+                  parts={selected.parts}
+                  highlight={initialHighlight ?? null}
+                  t={t}
+                  locale={locale}
+                />
               </div>
             </>
           ) : (
@@ -479,12 +569,19 @@ export function SchematicViewer({
   catalog,
   schemes,
   initialPage,
+  initialHighlight,
 }: {
   catalog: SchematicCatalog;
   schemes: SchemeRow[];
   initialPage?: number | null;
+  initialHighlight?: string | null;
 }) {
   return (
-    <SchematicViewerInner catalog={catalog} schemes={schemes} initialPage={initialPage ?? null} />
+    <SchematicViewerInner
+      catalog={catalog}
+      schemes={schemes}
+      initialPage={initialPage ?? null}
+      initialHighlight={initialHighlight ?? null}
+    />
   );
 }
