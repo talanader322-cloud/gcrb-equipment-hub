@@ -78,20 +78,14 @@ function ModelPage() {
       <Card className="overflow-hidden">
         <div className="grid gap-0 md:grid-cols-[280px_minmax(0,1fr)]">
           <div className="relative border-b border-border bg-muted/40 md:border-b-0 md:border-e">
-            {row.image_url ? (
-              <img
-          loading="lazy"
-          decoding="async"
-                src={row.image_url}
-                alt={row.model_name}
-                className="aspect-[4/3] size-full object-cover md:aspect-auto"
-              />
-            ) : (
-              <div className="flex aspect-[4/3] size-full flex-col items-center justify-center gap-2 text-muted-foreground md:aspect-auto">
-                <Truck className="size-12" />
-                <span className="text-xs">{t("entity.imagePlaceholder")}</span>
-              </div>
-            )}
+            <ModelPhoto
+              imagePath={row.image_path}
+              imageUrl={row.image_url}
+              equipmentTypeSlug={row.equipment_type?.slug}
+              alt={row.model_name}
+              className="aspect-[4/3] size-full object-cover md:aspect-auto"
+              iconClassName="size-12"
+            />
           </div>
           <div className="p-5">
             <div className="flex flex-wrap items-center gap-2">
