@@ -1195,6 +1195,8 @@ export type Database = {
           description: string | null
           equipment_type_id: string | null
           id: string
+          image_path: string | null
+          image_source: string | null
           image_url: string | null
           manufacturer_id: string
           model_name: string
@@ -1210,6 +1212,8 @@ export type Database = {
           description?: string | null
           equipment_type_id?: string | null
           id?: string
+          image_path?: string | null
+          image_source?: string | null
           image_url?: string | null
           manufacturer_id: string
           model_name: string
@@ -1225,6 +1229,8 @@ export type Database = {
           description?: string | null
           equipment_type_id?: string | null
           id?: string
+          image_path?: string | null
+          image_source?: string | null
           image_url?: string | null
           manufacturer_id?: string
           model_name?: string
