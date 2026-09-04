@@ -4,6 +4,7 @@ import { BookOpen, Plus, X } from "lucide-react";
 import { useState } from "react";
 
 import { NewEquipmentPanel } from "@/components/NewEquipmentPanel";
+import { ModelPhoto } from "@/components/models/ModelPhoto";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -148,7 +149,15 @@ function EquipmentPage() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {models.data?.rows.map((row) => (
           <Link key={row.id} to="/models/$modelId" params={{ modelId: row.id }}>
-            <Card className="h-full transition-colors hover:border-primary">
+            <Card className="h-full overflow-hidden transition-colors hover:border-primary">
+              <ModelPhoto
+                imagePath={row.image_path}
+                imageUrl={row.image_url}
+                equipmentTypeSlug={row.equipment_type?.slug ?? null}
+                alt={row.model_name}
+                className="aspect-[16/9] w-full border-b border-border bg-muted/40 object-cover"
+                iconClassName="size-8"
+              />
               <CardContent className="space-y-1 p-4">
                 <p className="font-mono text-base font-semibold">{row.model_name}</p>
                 <p className="text-xs text-muted-foreground">{row.manufacturer?.name}</p>

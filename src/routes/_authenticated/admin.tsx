@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ModelPhotoBulkUpload } from "@/components/models/ModelPhotoBulkUpload";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -138,6 +139,7 @@ function AdminPage() {
 
   return (
     <div className="space-y-5">
+      <ModelPhotoBulkUpload />
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">{t("users.title")}</h1>
         <p className="text-sm text-muted-foreground">{t("users.subtitle")}</p>
