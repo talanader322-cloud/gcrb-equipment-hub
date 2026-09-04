@@ -1,10 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BookOpen, Factory, History, Layers, Package, Truck } from "lucide-react";
+import { BookOpen, Factory, History, Layers, Package } from "lucide-react";
 import { useState } from "react";
 
 import { DiscoveryPanel } from "@/components/discovery/DiscoveryPanel";
 import { SchematicViewer } from "@/components/komatsu/SchematicViewer";
+import { ModelImagePicker } from "@/components/models/ModelImagePicker";
+import { ModelPhoto } from "@/components/models/ModelPhoto";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -78,20 +80,14 @@ function ModelPage() {
       <Card className="overflow-hidden">
         <div className="grid gap-0 md:grid-cols-[280px_minmax(0,1fr)]">
           <div className="relative border-b border-border bg-muted/40 md:border-b-0 md:border-e">
-            {row.image_url ? (
-              <img
-          loading="lazy"
-          decoding="async"
-                src={row.image_url}
-                alt={row.model_name}
-                className="aspect-[4/3] size-full object-cover md:aspect-auto"
-              />
-            ) : (
-              <div className="flex aspect-[4/3] size-full flex-col items-center justify-center gap-2 text-muted-foreground md:aspect-auto">
-                <Truck className="size-12" />
-                <span className="text-xs">{t("entity.imagePlaceholder")}</span>
-              </div>
-            )}
+            <ModelPhoto
+              imagePath={row.image_path}
+              imageUrl={row.image_url}
+              equipmentTypeSlug={row.equipment_type?.slug ?? null}
+              alt={row.model_name}
+              className="aspect-[4/3] size-full object-cover md:aspect-auto"
+              iconClassName="size-12"
+            />
           </div>
           <div className="p-5">
             <div className="flex flex-wrap items-center gap-2">
@@ -153,6 +149,13 @@ function ModelPage() {
         </TabsList>
 
         <TabsContent value="info" className="space-y-4">
+          {canManage && (
+            <ModelImagePicker
+              modelId={row.id}
+              hasPhoto={Boolean(row.image_path)}
+              imageSource={row.image_source}
+            />
+          )}
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>

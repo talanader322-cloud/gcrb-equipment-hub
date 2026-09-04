@@ -525,6 +525,40 @@ export const en = {
   "search.groupSchematicParts": "Part numbers inside catalog diagrams",
   "search.schematicHint":
     "Indexed directly from exploded diagrams — opening a result jumps to the exact diagram page.",
+
+  // model photo
+  "modelImage.title": "Machine photo",
+  "modelImage.hint":
+    "Pick a page from this machine's own catalog, or upload a photo. Photos are stored privately and opened through temporary secure links.",
+  "modelImage.page": "Page",
+  "modelImage.noCandidates": "No catalog page is available for this machine yet.",
+  "modelImage.upload": "Upload photo",
+  "modelImage.change": "Change photo",
+  "modelImage.saved": "Machine photo updated.",
+  "modelImage.coverFromPdf": "Take the photo from an archived catalog file:",
+  "modelImage.useCover": "Use first page",
+  "modelImage.coverFailed": "The catalog page could not be turned into an image.",
+  "modelImage.source.scheme": "From catalog diagram",
+  "modelImage.source.catalog_page": "From catalog cover",
+  "modelImage.source.manual": "Uploaded",
+  "modelImage.bulkTitle": "Machine photos",
+  "modelImage.bulkHint":
+    "Name each image file after the machine (for example WA470-3.jpg) and drop them all here. Unmatched files can be assigned by hand.",
+  "modelImage.bulkChoose": "Choose images",
+  "modelImage.bulkUploadAll": "Upload all",
+  "modelImage.bulkAutoTitle": "Fill from catalogs automatically",
+  "modelImage.bulkAutoHint":
+    "For every machine without a photo that already has a catalog, the first catalog page is adopted as its photo.",
+  "modelImage.bulkAutoRun": "Fill automatically",
+  "modelImage.bulkAutoDone": "{count} machine photo(s) added from catalogs.",
+  "modelImage.bulkAutoNone": "No machine could be filled automatically.",
+  "modelImage.missingCount": "{count} machine(s) without a photo",
+  "modelImage.selectModel": "Select machine",
+  "modelImage.statusPending": "Ready",
+  "modelImage.statusDone": "Saved",
+  "modelImage.statusFailed": "Failed",
+  "modelImage.statusUnmatched": "Needs a machine",
+  "modelImage.working": "Working…",
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -1032,6 +1066,40 @@ export const ar: Record<TranslationKey, string> = {
   "search.groupSchematicParts": "أرقام القطع داخل رسوم الكتالوجات",
   "search.schematicHint":
     "مفهرسة مباشرة من الرسوم التفجيرية — فتح أي نتيجة ينقلك إلى صفحة الرسم المطلوبة تحديدًا.",
+
+  // صورة الموديل
+  "modelImage.title": "صورة المعدة",
+  "modelImage.hint":
+    "اختر صفحة من كتالوج المعدة نفسها، أو ارفع صورة. تُخزَّن الصور بشكل خاص وتُفتح عبر روابط مؤقتة آمنة.",
+  "modelImage.page": "صفحة",
+  "modelImage.noCandidates": "لا توجد صفحة كتالوج متاحة لهذه المعدة بعد.",
+  "modelImage.upload": "رفع صورة",
+  "modelImage.change": "تغيير الصورة",
+  "modelImage.saved": "تم تحديث صورة المعدة.",
+  "modelImage.coverFromPdf": "أو خُذ الصورة من ملف كتالوج مؤرشف:",
+  "modelImage.useCover": "استخدام الصفحة الأولى",
+  "modelImage.coverFailed": "تعذّر تحويل صفحة الكتالوج إلى صورة.",
+  "modelImage.source.scheme": "من رسم الكتالوج",
+  "modelImage.source.catalog_page": "من غلاف الكتالوج",
+  "modelImage.source.manual": "مرفوعة يدويًا",
+  "modelImage.bulkTitle": "صور المعدات",
+  "modelImage.bulkHint":
+    "سمِّ كل ملف صورة باسم المعدة (مثل WA470-3.jpg) وأفلت الملفات جميعًا هنا. ما لا يُطابق تلقائيًا يمكن إسناده يدويًا.",
+  "modelImage.bulkChoose": "اختيار الصور",
+  "modelImage.bulkUploadAll": "رفع الكل",
+  "modelImage.bulkAutoTitle": "تعبئة تلقائية من الكتالوجات",
+  "modelImage.bulkAutoHint":
+    "لكل معدة بلا صورة ولها كتالوج، تُعتمد أول صفحة من الكتالوج كصورة لها.",
+  "modelImage.bulkAutoRun": "تعبئة تلقائية",
+  "modelImage.bulkAutoDone": "تمت إضافة {count} صورة معدة من الكتالوجات.",
+  "modelImage.bulkAutoNone": "لم يتم تعبئة أي معدة تلقائيًا.",
+  "modelImage.missingCount": "{count} معدة بلا صورة",
+  "modelImage.selectModel": "اختر المعدة",
+  "modelImage.statusPending": "جاهزة",
+  "modelImage.statusDone": "محفوظة",
+  "modelImage.statusFailed": "فشلت",
+  "modelImage.statusUnmatched": "تحتاج تحديد معدة",
+  "modelImage.working": "جارٍ العمل…",
 };
 
 export const dictionary = { en, ar } as {
