@@ -1066,6 +1066,40 @@ export const ar: Record<TranslationKey, string> = {
   "search.groupSchematicParts": "أرقام القطع داخل رسوم الكتالوجات",
   "search.schematicHint":
     "مفهرسة مباشرة من الرسوم التفجيرية — فتح أي نتيجة ينقلك إلى صفحة الرسم المطلوبة تحديدًا.",
+
+  // صورة الموديل
+  "modelImage.title": "صورة المعدة",
+  "modelImage.hint":
+    "اختر صفحة من كتالوج المعدة نفسها، أو ارفع صورة. تُخزَّن الصور بشكل خاص وتُفتح عبر روابط مؤقتة آمنة.",
+  "modelImage.page": "صفحة",
+  "modelImage.noCandidates": "لا توجد صفحة كتالوج متاحة لهذه المعدة بعد.",
+  "modelImage.upload": "رفع صورة",
+  "modelImage.change": "تغيير الصورة",
+  "modelImage.saved": "تم تحديث صورة المعدة.",
+  "modelImage.coverFromPdf": "أو خُذ الصورة من ملف كتالوج مؤرشف:",
+  "modelImage.useCover": "استخدام الصفحة الأولى",
+  "modelImage.coverFailed": "تعذّر تحويل صفحة الكتالوج إلى صورة.",
+  "modelImage.source.scheme": "من رسم الكتالوج",
+  "modelImage.source.catalog_page": "من غلاف الكتالوج",
+  "modelImage.source.manual": "مرفوعة يدويًا",
+  "modelImage.bulkTitle": "صور المعدات",
+  "modelImage.bulkHint":
+    "سمِّ كل ملف صورة باسم المعدة (مثل WA470-3.jpg) وأفلت الملفات جميعًا هنا. ما لا يُطابق تلقائيًا يمكن إسناده يدويًا.",
+  "modelImage.bulkChoose": "اختيار الصور",
+  "modelImage.bulkUploadAll": "رفع الكل",
+  "modelImage.bulkAutoTitle": "تعبئة تلقائية من الكتالوجات",
+  "modelImage.bulkAutoHint":
+    "لكل معدة بلا صورة ولها كتالوج، تُعتمد أول صفحة من الكتالوج كصورة لها.",
+  "modelImage.bulkAutoRun": "تعبئة تلقائية",
+  "modelImage.bulkAutoDone": "تمت إضافة {count} صورة معدة من الكتالوجات.",
+  "modelImage.bulkAutoNone": "لم يتم تعبئة أي معدة تلقائيًا.",
+  "modelImage.missingCount": "{count} معدة بلا صورة",
+  "modelImage.selectModel": "اختر المعدة",
+  "modelImage.statusPending": "جاهزة",
+  "modelImage.statusDone": "محفوظة",
+  "modelImage.statusFailed": "فشلت",
+  "modelImage.statusUnmatched": "تحتاج تحديد معدة",
+  "modelImage.working": "جارٍ العمل…",
 };
 
 export const dictionary = { en, ar } as {
