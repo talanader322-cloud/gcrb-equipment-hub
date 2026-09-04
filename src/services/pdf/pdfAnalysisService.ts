@@ -17,6 +17,11 @@ const NO_TEXT_PAGE_CHARS = 40;
 
 type PdfjsPage = {
   getTextContent(): Promise<{ items: Array<{ str?: string }> }>;
+  getViewport(options: { scale: number }): { width: number; height: number };
+  render(options: {
+    canvasContext: CanvasRenderingContext2D;
+    viewport: { width: number; height: number };
+  }): { promise: Promise<void> };
 };
 
 type PdfjsDocument = {
