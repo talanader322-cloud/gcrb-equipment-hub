@@ -158,7 +158,7 @@ export function ModelImagePicker({
                 className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2"
               >
                 <p className="min-w-0 truncate text-sm">
-                  {file.filename ?? file.catalogTitle || file.storagePath}
+                  {file.filename ?? (file.catalogTitle || file.storagePath)}
                 </p>
                 <Button
                   size="sm"
