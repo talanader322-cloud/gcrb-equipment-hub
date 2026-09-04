@@ -166,6 +166,56 @@ export const modelImageService = {
     return stored.path;
   },
 
+  /** Archived PDF files belonging to this model's catalogs (cover candidates). */
+  async listCatalogPdfs(modelId: string) {
+    const { data: catalogs, error: catalogError } = await supabase
+      .from("catalogs")
+      .select("id, title")
+      .eq("machine_model_id", modelId);
+    if (catalogError) throw new Error(catalogError.message);
+    const rows = catalogs ?? [];
+    if (rows.length === 0) return [];
+    const titles = new Map(rows.map((row) => [row.id, row.title]));
+    const { data, error } = await supabase
+      .from("catalog_files")
+      .select("id, catalog_id, storage_bucket, storage_path, original_filename, mime_type")
+      .in(
+        "catalog_id",
+        rows.map((row) => row.id),
+      )
+      .order("uploaded_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? [])
+      .filter((file) => (file.mime_type ?? "").includes("pdf"))
+      .map((file) => ({
+        id: file.id,
+        catalogId: file.catalog_id,
+        catalogTitle: titles.get(file.catalog_id) ?? "",
+        storagePath: file.storage_path,
+        filename: file.original_filename,
+      }));
+  },
+
+  /**
+   * Render the first page of an archived catalog PDF and adopt it as the model
+   * photo. Returns false when the PDF engine could not draw the page.
+   */
+  async applyCatalogCover(
+    modelId: string,
+    file: { storagePath: string; filename: string | null },
+    pageNumber = 1,
+  ): Promise<boolean> {
+    const { data, error } = await supabase.storage.from("catalogs").download(file.storagePath);
+    if (error || !data) throw new Error(error?.message ?? "Catalog file could not be read.");
+    const { renderPdfPageImage } = await import("@/services/pdf/pdfAnalysisService");
+    const bytes = new Uint8Array(await data.arrayBuffer()) as Uint8Array<ArrayBuffer>;
+    const rendered = await renderPdfPageImage(bytes, pageNumber);
+    if (!rendered) return false;
+    const image = new File([rendered], `cover-${pageNumber}.png`, { type: "image/png" });
+    await this.applyRenderedPage(modelId, image);
+    return true;
+  },
+
   /** Models that still have no photo, with their canonical name and aliases. */
   async listModelsWithoutPhoto() {
     const [models, aliases] = await Promise.all([
