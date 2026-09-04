@@ -5,6 +5,8 @@ import { useState } from "react";
 
 import { DiscoveryPanel } from "@/components/discovery/DiscoveryPanel";
 import { SchematicViewer } from "@/components/komatsu/SchematicViewer";
+import { ModelImagePicker } from "@/components/models/ModelImagePicker";
+import { ModelPhoto } from "@/components/models/ModelPhoto";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
