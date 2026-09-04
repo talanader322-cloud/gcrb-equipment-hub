@@ -83,7 +83,7 @@ function ModelPage() {
             <ModelPhoto
               imagePath={row.image_path}
               imageUrl={row.image_url}
-              equipmentTypeSlug={row.equipment_type?.slug}
+              equipmentTypeSlug={row.equipment_type?.slug ?? null}
               alt={row.model_name}
               className="aspect-[4/3] size-full object-cover md:aspect-auto"
               iconClassName="size-12"
