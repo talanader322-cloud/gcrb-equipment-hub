@@ -17,6 +17,11 @@ const NO_TEXT_PAGE_CHARS = 40;
 
 type PdfjsPage = {
   getTextContent(): Promise<{ items: Array<{ str?: string }> }>;
+  getViewport(options: { scale: number }): { width: number; height: number };
+  render(options: {
+    canvasContext: CanvasRenderingContext2D;
+    viewport: { width: number; height: number };
+  }): { promise: Promise<void> };
 };
 
 type PdfjsDocument = {
@@ -154,4 +159,43 @@ export async function analyzePdfBytes(bytes: Uint8Array<ArrayBuffer>): Promise<P
   };
 }
 
-export const pdfAnalysisService = { analyze: analyzePdfBytes };
+/**
+ * Render one PDF page to a PNG blob (used to lift a catalog cover as the model
+ * photo). Returns null when the PDF engine is unavailable or the page cannot be
+ * drawn, so callers degrade to the manual-upload path.
+ */
+export async function renderPdfPageImage(
+  bytes: Uint8Array<ArrayBuffer>,
+  pageNumber = 1,
+  maxWidth = 1200,
+): Promise<Blob | null> {
+  let pdfjs: PdfjsModule;
+  try {
+    pdfjs = await loadPdfjs();
+  } catch {
+    return null;
+  }
+  let doc: PdfjsDocument | null = null;
+  try {
+    doc = await pdfjs.getDocument({ data: bytes }).promise;
+    const page = await doc.getPage(Math.min(Math.max(pageNumber, 1), doc.numPages));
+    const base = page.getViewport({ scale: 1 });
+    const scale = Math.min(2, Math.max(0.5, maxWidth / base.width));
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    const context = canvas.getContext("2d");
+    if (!context) return null;
+    await page.render({ canvasContext: context, viewport }).promise;
+    return await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((blob) => resolve(blob), "image/png", 0.92),
+    );
+  } catch {
+    return null;
+  } finally {
+    doc?.destroy?.();
+  }
+}
+
+export const pdfAnalysisService = { analyze: analyzePdfBytes, renderPage: renderPdfPageImage };
