@@ -149,6 +149,13 @@ function ModelPage() {
         </TabsList>
 
         <TabsContent value="info" className="space-y-4">
+          {canManage && (
+            <ModelImagePicker
+              modelId={row.id}
+              hasPhoto={Boolean(row.image_path)}
+              imageSource={row.image_source}
+            />
+          )}
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
