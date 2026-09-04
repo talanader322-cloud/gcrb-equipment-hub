@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BookOpen, Factory, History, Layers, Package, Truck } from "lucide-react";
+import { BookOpen, Factory, History, Layers, Package } from "lucide-react";
 import { useState } from "react";
 
 import { DiscoveryPanel } from "@/components/discovery/DiscoveryPanel";
