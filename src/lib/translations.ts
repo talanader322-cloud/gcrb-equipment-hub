@@ -525,6 +525,40 @@ export const en = {
   "search.groupSchematicParts": "Part numbers inside catalog diagrams",
   "search.schematicHint":
     "Indexed directly from exploded diagrams — opening a result jumps to the exact diagram page.",
+
+  // model photo
+  "modelImage.title": "Machine photo",
+  "modelImage.hint":
+    "Pick a page from this machine's own catalog, or upload a photo. Photos are stored privately and opened through temporary secure links.",
+  "modelImage.page": "Page",
+  "modelImage.noCandidates": "No catalog page is available for this machine yet.",
+  "modelImage.upload": "Upload photo",
+  "modelImage.change": "Change photo",
+  "modelImage.saved": "Machine photo updated.",
+  "modelImage.coverFromPdf": "Take the photo from an archived catalog file:",
+  "modelImage.useCover": "Use first page",
+  "modelImage.coverFailed": "The catalog page could not be turned into an image.",
+  "modelImage.source.scheme": "From catalog diagram",
+  "modelImage.source.catalog_page": "From catalog cover",
+  "modelImage.source.manual": "Uploaded",
+  "modelImage.bulkTitle": "Machine photos",
+  "modelImage.bulkHint":
+    "Name each image file after the machine (for example WA470-3.jpg) and drop them all here. Unmatched files can be assigned by hand.",
+  "modelImage.bulkChoose": "Choose images",
+  "modelImage.bulkUploadAll": "Upload all",
+  "modelImage.bulkAutoTitle": "Fill from catalogs automatically",
+  "modelImage.bulkAutoHint":
+    "For every machine without a photo that already has a catalog, the first catalog page is adopted as its photo.",
+  "modelImage.bulkAutoRun": "Fill automatically",
+  "modelImage.bulkAutoDone": "{count} machine photo(s) added from catalogs.",
+  "modelImage.bulkAutoNone": "No machine could be filled automatically.",
+  "modelImage.missingCount": "{count} machine(s) without a photo",
+  "modelImage.selectModel": "Select machine",
+  "modelImage.statusPending": "Ready",
+  "modelImage.statusDone": "Saved",
+  "modelImage.statusFailed": "Failed",
+  "modelImage.statusUnmatched": "Needs a machine",
+  "modelImage.working": "Working…",
 } as const;
 
 export type TranslationKey = keyof typeof en;
