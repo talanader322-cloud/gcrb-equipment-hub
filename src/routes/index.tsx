@@ -1,13 +1,12 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Database, FileStack, Globe2, Search, Wrench } from "lucide-react";
-import { useEffect } from "react";
-
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { useSession } from "@/hooks/useSession";
-import { useI18n } from "@/lib/i18n";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
+  ssr: false,
+  beforeLoad: async () => {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data } = await supabase.auth.getUser();
+    throw redirect({ to: data.user ? "/dashboard" : "/auth", replace: true });
+  },
   head: () => ({
     meta: [
       { title: "كاتلوج معدات المؤسسة العامة للطرق والجسور | GCRB Equipment Catalog" },
