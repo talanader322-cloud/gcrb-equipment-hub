@@ -858,9 +858,17 @@ export const ar: Record<TranslationKey, string> = {
   "settings.light": "فاتح",
   "settings.dark": "داكن",
   "settings.account": "الحساب",
+  "settings.password": "تغيير كلمة المرور",
+  "settings.currentPassword": "كلمة المرور الحالية",
+  "settings.newPassword": "كلمة المرور الجديدة",
+  "settings.confirmPassword": "تأكيد كلمة المرور الجديدة",
+  "settings.passwordHint": "٨ أحرف على الأقل.",
+  "settings.passwordMismatch": "كلمتا المرور الجديدتان غير متطابقتين.",
+  "settings.passwordChanged": "تم تغيير كلمة المرور بنجاح.",
   "settings.about": "حول التطبيق",
   "settings.desktopNote":
     "هذا البناء مُهيأ لإصدار مكتبي مستقبلي لنظام Windows مع تخزين كتالوجات دون اتصال. تغليف التطبيق المكتبي ليس جزءاً من هذه المرحلة.",
+
 
   "state.loading": "جارٍ التحميل...",
   "state.empty": "لا توجد سجلات",
