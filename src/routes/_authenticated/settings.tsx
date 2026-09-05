@@ -1,11 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useAccess, useSession } from "@/hooks/useSession";
+import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
 import type { TranslationKey } from "@/lib/translations";
+
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -23,6 +29,35 @@ function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { user } = useSession();
   const access = useAccess(user?.id);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const submitPassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error(t("settings.passwordMismatch"));
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+      // current_password is required by Lovable Cloud for signed-in changes
+      current_password: currentPassword,
+    });
+    setSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(t("settings.passwordChanged"));
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+
+
 
   return (
     <div className="space-y-5">
@@ -88,6 +123,58 @@ function SettingsPage() {
           ))}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("settings.password")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form className="grid max-w-md gap-3" onSubmit={submitPassword}>
+            <div className="space-y-1.5">
+              <Label htmlFor="cur-pw">{t("settings.currentPassword")}</Label>
+              <Input
+                id="cur-pw"
+                type="password"
+                dir="ltr"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-pw">{t("settings.newPassword")}</Label>
+              <Input
+                id="new-pw"
+                type="password"
+                dir="ltr"
+                minLength={8}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+              <p className="text-[11px] text-muted-foreground">{t("settings.passwordHint")}</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-pw2">{t("settings.confirmPassword")}</Label>
+              <Input
+                id="new-pw2"
+                type="password"
+                dir="ltr"
+                minLength={8}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Button type="submit" disabled={saving}>
+                {t("settings.password")}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
 
       <Card>
         <CardHeader>

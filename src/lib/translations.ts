@@ -306,9 +306,17 @@ export const en = {
   "settings.light": "Light",
   "settings.dark": "Dark",
   "settings.account": "Account",
+  "settings.password": "Change password",
+  "settings.currentPassword": "Current password",
+  "settings.newPassword": "New password",
+  "settings.confirmPassword": "Confirm new password",
+  "settings.passwordHint": "At least 8 characters.",
+  "settings.passwordMismatch": "The new passwords do not match.",
+  "settings.passwordChanged": "Your password has been changed.",
   "settings.about": "About",
   "settings.desktopNote":
     "This build is prepared for a future Windows desktop edition with offline catalog storage. Desktop packaging is not part of this phase.",
+
 
   // generic states
   "state.loading": "Loading...",
@@ -850,9 +858,17 @@ export const ar: Record<TranslationKey, string> = {
   "settings.light": "فاتح",
   "settings.dark": "داكن",
   "settings.account": "الحساب",
+  "settings.password": "تغيير كلمة المرور",
+  "settings.currentPassword": "كلمة المرور الحالية",
+  "settings.newPassword": "كلمة المرور الجديدة",
+  "settings.confirmPassword": "تأكيد كلمة المرور الجديدة",
+  "settings.passwordHint": "٨ أحرف على الأقل.",
+  "settings.passwordMismatch": "كلمتا المرور الجديدتان غير متطابقتين.",
+  "settings.passwordChanged": "تم تغيير كلمة المرور بنجاح.",
   "settings.about": "حول التطبيق",
   "settings.desktopNote":
     "هذا البناء مُهيأ لإصدار مكتبي مستقبلي لنظام Windows مع تخزين كتالوجات دون اتصال. تغليف التطبيق المكتبي ليس جزءاً من هذه المرحلة.",
+
 
   "state.loading": "جارٍ التحميل...",
   "state.empty": "لا توجد سجلات",
