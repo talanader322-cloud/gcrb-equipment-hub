@@ -210,6 +210,20 @@ export async function setManagedUserPassword(userId: string, password: string) {
   if (password.length < 8) throw new Error("Password must be at least 8 characters");
   const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, { password });
   if (error) throw new Error(error.message);
+
+  // Clear the temporary lockout so the new password works immediately.
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("username")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profile?.username) {
+    await supabaseAdmin
+      .from("auth_login_attempts")
+      .delete()
+      .eq("username", profile.username)
+      .eq("success", false);
+  }
 }
 
 export async function setManagedUserActive(userId: string, active: boolean) {
