@@ -97,6 +97,58 @@ function SettingsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">{t("settings.password")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form className="grid max-w-md gap-3" onSubmit={submitPassword}>
+            <div className="space-y-1.5">
+              <Label htmlFor="cur-pw">{t("settings.currentPassword")}</Label>
+              <Input
+                id="cur-pw"
+                type="password"
+                dir="ltr"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-pw">{t("settings.newPassword")}</Label>
+              <Input
+                id="new-pw"
+                type="password"
+                dir="ltr"
+                minLength={8}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+              <p className="text-[11px] text-muted-foreground">{t("settings.passwordHint")}</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-pw2">{t("settings.confirmPassword")}</Label>
+              <Input
+                id="new-pw2"
+                type="password"
+                dir="ltr"
+                minLength={8}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Button type="submit" disabled={saving}>
+                {t("settings.password")}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">{t("settings.about")}</CardTitle>
         </CardHeader>
         <CardContent>
