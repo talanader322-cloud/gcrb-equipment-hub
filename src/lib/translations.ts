@@ -306,9 +306,17 @@ export const en = {
   "settings.light": "Light",
   "settings.dark": "Dark",
   "settings.account": "Account",
+  "settings.password": "Change password",
+  "settings.currentPassword": "Current password",
+  "settings.newPassword": "New password",
+  "settings.confirmPassword": "Confirm new password",
+  "settings.passwordHint": "At least 8 characters.",
+  "settings.passwordMismatch": "The new passwords do not match.",
+  "settings.passwordChanged": "Your password has been changed.",
   "settings.about": "About",
   "settings.desktopNote":
     "This build is prepared for a future Windows desktop edition with offline catalog storage. Desktop packaging is not part of this phase.",
+
 
   // generic states
   "state.loading": "Loading...",
