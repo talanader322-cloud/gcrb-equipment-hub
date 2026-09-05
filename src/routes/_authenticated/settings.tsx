@@ -29,6 +29,35 @@ function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { user } = useSession();
   const access = useAccess(user?.id);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const submitPassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error(t("settings.passwordMismatch"));
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+      // @ts-expect-error current_password is accepted by Lovable Cloud auth
+      current_password: currentPassword,
+    });
+    setSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(t("settings.passwordChanged"));
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+
+
 
   return (
     <div className="space-y-5">
