@@ -4,9 +4,10 @@ export const Route = createFileRoute("/")({
   ssr: false,
   beforeLoad: async () => {
     const { supabase } = await import("@/integrations/supabase/client");
-    const { data } = await supabase.auth.getUser();
-    throw redirect({ to: data.user ? "/dashboard" : "/auth", replace: true });
+    const { data } = await supabase.auth.getSession();
+    throw redirect({ to: data.session?.user ? "/dashboard" : "/auth", replace: true });
   },
+
   head: () => ({
     meta: [
       { title: "تسجيل الدخول | كاتلوج معدات المؤسسة العامة للطرق والجسور" },
