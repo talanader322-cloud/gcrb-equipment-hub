@@ -56,7 +56,7 @@ type GcsPageJson = {
     PageTitle?: string | null;
     PageRef?: string | null;
   } | null;
-  image?: unknown[];
+  image?: GcsPageImage[];
   views?: unknown[];
   part?: Array<{
     id?: number | string | null;
@@ -76,6 +76,32 @@ type GcsPageJson = {
     book_id?: number | string | null;
   }>;
 };
+
+type GcsPageImage = {
+  PicName?: string | null;
+  BookDir?: string | null;
+  SrcPicWidth?: string | number | null;
+  SrcPicHeight?: string | number | null;
+  labels?: Array<{
+    sLabel?: string | null;
+    LabelX1?: string | number | null;
+    LabelY1?: string | number | null;
+    LabelX2?: string | number | null;
+    LabelY2?: string | number | null;
+  }> | null;
+};
+
+/** Hotspot rectangle of one item number drawn over the diagram. */
+export type SchemeLabelPayload = {
+  itemRef: string | null;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+};
+
+/** Diagram CDN serving the mirrored Komatsu parts-book pictures. */
+const DIAGRAM_BASE = "https://c1.a2109.com/komatsu/";
 
 type GcsListResponse = {
   items?: { name: string }[];

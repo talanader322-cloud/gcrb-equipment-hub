@@ -348,6 +348,44 @@ export type Database = {
           },
         ]
       }
+      catalog_scheme_labels: {
+        Row: {
+          id: string
+          item_ref: string | null
+          scheme_id: string
+          x1: number
+          x2: number
+          y1: number
+          y2: number
+        }
+        Insert: {
+          id?: string
+          item_ref?: string | null
+          scheme_id: string
+          x1: number
+          x2: number
+          y1: number
+          y2: number
+        }
+        Update: {
+          id?: string
+          item_ref?: string | null
+          scheme_id?: string
+          x1?: number
+          x2?: number
+          y1?: number
+          y2?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_scheme_labels_scheme_id_fkey"
+            columns: ["scheme_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_schemes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       catalog_scheme_parts: {
         Row: {
           alt: string | null
@@ -409,8 +447,10 @@ export type Database = {
           catalog_id: string
           created_at: string
           id: string
+          image_height: number | null
           image_storage_path: string | null
           image_url: string | null
+          image_width: number | null
           mirrored: boolean
           page_number: number
           part_count: number
@@ -421,8 +461,10 @@ export type Database = {
           catalog_id: string
           created_at?: string
           id?: string
+          image_height?: number | null
           image_storage_path?: string | null
           image_url?: string | null
+          image_width?: number | null
           mirrored?: boolean
           page_number: number
           part_count?: number
@@ -433,8 +475,10 @@ export type Database = {
           catalog_id?: string
           created_at?: string
           id?: string
+          image_height?: number | null
           image_storage_path?: string | null
           image_url?: string | null
+          image_width?: number | null
           mirrored?: boolean
           page_number?: number
           part_count?: number
@@ -1684,6 +1728,10 @@ export type Database = {
           p_payload: Json
           p_source_id: string
         }
+        Returns: Json
+      }
+      link_catalog_to_model: {
+        Args: { p_catalog_id: string; p_model_hint: string }
         Returns: Json
       }
       normalize_code: { Args: { input: string }; Returns: string }
