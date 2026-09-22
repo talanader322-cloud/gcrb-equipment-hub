@@ -224,24 +224,34 @@ async function fetchPageJson(
   return JSON.parse(text) as GcsPageJson;
 }
 
-function normalizeImages(list: unknown[] | null | undefined): string[] {
-  const out: string[] = [];
-  for (const entry of list ?? []) {
-    if (typeof entry === "string") {
-      if (entry.trim()) out.push(entry);
-    } else if (entry && typeof entry === "object") {
-      const record = entry as Record<string, unknown>;
-      for (const key of ["url", "src", "file", "a"]) {
-        const value = record[key];
-        if (typeof value === "string" && value.trim()) {
-          out.push(value);
-          break;
-        }
-      }
-    }
-  }
-  return out;
+/**
+ * The source JSON stores the diagram as a file name plus the book directory,
+ * not as a URL, so the CDN address has to be assembled here.
+ */
+function diagramUrlFrom(image: GcsPageImage | undefined, fallbackDir: string | null): string | null {
+  const file = image?.PicName ? String(image.PicName).trim() : "";
+  if (!file) return null;
+  const dir = (image?.BookDir ? String(image.BookDir) : (fallbackDir ?? "")).trim();
+  if (!dir) return null;
+  return `${DIAGRAM_BASE}${dir}/${file}`;
 }
+
+function toInt(value: string | number | null | undefined): number | null {
+  if (value == null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.trunc(n) : null;
+}
+
+/** Item numbers in the source can carry inline markup (alternate-part icons). */
+function stripMarkup(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const clean = String(value)
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return clean.length > 0 ? clean : null;
+}
+
 
 function bookTitleFrom(page: GcsPageJson): string {
   const b = page.book;
