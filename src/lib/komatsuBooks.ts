@@ -9,7 +9,6 @@ import {
   type CachedBookMeta,
 } from "@/lib/komatsuBookCache";
 import { fetchKomatsuBookPage, fetchKomatsuDiagram } from "@/lib/komatsuProxy.functions";
-import type { CatalogSchemePart } from "@/lib/types";
 
 /**
  * Komatsu parts-books importer.
