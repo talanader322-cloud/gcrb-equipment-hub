@@ -406,6 +406,20 @@ export type ImportBookOptions = {
   signal?: AbortSignal;
 };
 
+/** Diagrams already copied into storage for this catalog, page → object path. */
+async function loadMirroredPages(catalogId: string): Promise<Map<number, string>> {
+  const map = new Map<number, string>();
+  const { data } = await supabase
+    .from("catalog_schemes")
+    .select("page_number, image_storage_path")
+    .eq("catalog_id", catalogId)
+    .not("image_storage_path", "is", null);
+  for (const row of data ?? []) {
+    if (row.image_storage_path) map.set(row.page_number, row.image_storage_path);
+  }
+  return map;
+}
+
 /** Import a single book: create/update its catalogs row, index text + schemes. */
 export async function importKomatsuBook(
   ref: KomatsuBookRef,
@@ -418,7 +432,10 @@ export async function importKomatsuBook(
   const pages = await listKomatsuPages(ref, signal);
 
   const cover = await fetchPageJson(ref, pages[0] ?? 1, signal);
-  const title = bookTitleFrom(cover) || `Komatsu parts book ${ref.book}`;
+  const bookName = bookTitleFrom(cover) || `Komatsu parts book ${ref.book}`;
+  // Several books cover the same model, so the book number stays in the title
+  // to keep them apart in every list.
+  const title = `${bookName} (#${ref.book})`;
   const reference = `kbp_json:${ref.book}`;
 
   onEvent({ type: "log", message: `book ${ref.book}: “${title}” (${pages.length} pages)` });
@@ -438,14 +455,9 @@ export async function importKomatsuBook(
   const catalogId = ((created as { catalogId?: string }) ?? {}).catalogId;
   if (!catalogId) throw new Error("Catalog creation returned no id.");
 
-  const schemePages: {
-    pageNumber: number;
-    title: string | null;
-    imageUrl: string | null;
-    storagePath: string | null;
-    mirrored: boolean;
-    parts: Partial<CatalogSchemePart>[];
-  }[] = [];
+  const alreadyMirrored = mirrorImages ? await loadMirroredPages(catalogId) : new Map<number, string>();
+
+  const schemePages: (SchemePagePayload & { pageNumber: number })[] = [];
 
   const textPages: {
     pageNumber: number;
@@ -455,6 +467,8 @@ export async function importKomatsuBook(
 
   let done = 0;
   let index = 0;
+  let mirrorFailures = 0;
+  let firstMirrorError: string | null = null;
   const runner = async () => {
     while (index < pages.length) {
       if (signal?.aborted) throw new DOMException("Import aborted", "AbortError");
@@ -464,11 +478,17 @@ export async function importKomatsuBook(
       try {
         const json = await fetchPageJson(ref, page, signal);
         const payload = buildPagePayload(json);
-        let storagePath: string | null = null;
-        let mirrored = false;
-        if (mirrorImages && payload.imageUrl) {
-          storagePath = await uploadImage(catalogId, ref.book, page, payload.imageUrl);
-          mirrored = storagePath !== null;
+        let storagePath: string | null = alreadyMirrored.get(page) ?? null;
+        let mirrored = storagePath !== null;
+        if (mirrorImages && !mirrored && payload.imageUrl) {
+          const result = await uploadImage(catalogId, ref.book, page, payload.imageUrl);
+          if ("path" in result) {
+            storagePath = result.path;
+            mirrored = true;
+          } else {
+            mirrorFailures += 1;
+            firstMirrorError ??= result.error;
+          }
         }
         schemePages.push({ ...payload, pageNumber: page, storagePath, mirrored });
         textPages.push({
@@ -491,11 +511,36 @@ export async function importKomatsuBook(
   await Promise.all(Array.from({ length: Math.min(4, pages.length) }, () => runner()));
 
   if (schemePages.length > 0) {
-    await supabase.rpc("set_catalog_schemes", { p_catalog_id: catalogId, p_pages: schemePages });
+    const { error } = await supabase.rpc("set_catalog_schemes", {
+      p_catalog_id: catalogId,
+      p_pages: schemePages,
+    });
+    if (error) throw new Error(error.message);
   }
   if (textPages.length > 0) {
     await supabase.rpc("upsert_catalog_pages", { p_catalog_id: catalogId, p_pages: textPages });
   }
+
+  if (mirrorFailures > 0) {
+    onEvent({
+      type: "log",
+      message: `book ${ref.book}: ${mirrorFailures} diagram(s) not copied (${firstMirrorError ?? "unknown"}) — the source link is still saved.`,
+    });
+  }
+
+  // Link the catalog to its machine model so it shows on the model page.
+  const hint = modelHintFromTitle(bookName);
+  const { data: linked } = await supabase.rpc("link_catalog_to_model", {
+    p_catalog_id: catalogId,
+    p_model_hint: hint,
+  });
+  const linkOk = ((linked as { ok?: boolean }) ?? {}).ok === true;
+  onEvent({
+    type: "log",
+    message: linkOk
+      ? `book ${ref.book}: linked to model “${hint}”.`
+      : `book ${ref.book}: no model matched “${hint}” — needs manual linking.`,
+  });
 
   return { catalogId, pages: textPages.length };
 }
