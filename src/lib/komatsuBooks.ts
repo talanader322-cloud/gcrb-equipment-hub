@@ -349,30 +349,56 @@ function buildPagePayload(page: GcsPageJson): SchemePagePayload {
   };
 }
 
+async function uploadImageOnce(
+  catalogId: string,
+  book: string,
+  page: number,
+  imageUrl: string,
+): Promise<string> {
+  // Diagram CDN sends no CORS headers either — fetch via the server proxy.
+  const { base64, contentType } = await fetchKomatsuDiagram({ data: { url: imageUrl } });
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  const blob = new Blob([bytes], { type: contentType });
+  const ext = (imageUrl.split(".").pop() ?? "png").split(/[/?#]/)[0] || "png";
+  const path = `schemes/${catalogId}/${book}/${page}.${ext}`;
+  const { error } = await supabase.storage
+    .from("catalogs")
+    .upload(path, blob, { upsert: true, contentType: blob.type || "image/png" });
+  if (error) throw new Error(error.message);
+  return path;
+}
+
+/** Copy one diagram into the private catalogs bucket, retrying twice. */
 async function uploadImage(
   catalogId: string,
   book: string,
   page: number,
   imageUrl: string,
-): Promise<string | null> {
-  try {
-    // Diagram CDN sends no CORS headers either — fetch via the server proxy.
-    const { base64, contentType } = await fetchKomatsuDiagram({ data: { url: imageUrl } });
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-    const blob = new Blob([bytes], { type: contentType });
-    const ext = (imageUrl.split(".").pop() ?? "png").split(/[/?#]/)[0] || "png";
-    const path = `schemes/${catalogId}/${book}/${page}.${ext}`;
-    const { error } = await supabase.storage
-      .from("catalogs")
-      .upload(path, blob, { upsert: true, contentType: blob.type || "image/png" });
-    if (error) return null;
-    return path;
-  } catch {
-    return null;
+): Promise<{ path: string } | { error: string }> {
+  let last = "unknown error";
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const path = await uploadImageOnce(catalogId, book, page, imageUrl);
+      return { path };
+    } catch (err) {
+      last = errMsg(err);
+      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+    }
   }
+  return { error: last };
 }
+
+/**
+ * Model hint from a book title such as "D155A-3 S/N 60001-UP" → "D155A-3".
+ */
+export function modelHintFromTitle(title: string): string {
+  const head = title.split(/\bS\/N\b/i)[0] ?? title;
+  const token = head.trim().split(/[\s,(]+/)[0] ?? "";
+  return token.trim();
+}
+
 
 export type ImportBookOptions = {
   manufacturerId: string;
