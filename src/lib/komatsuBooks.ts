@@ -757,3 +757,67 @@ export async function loadImportedBooks(): Promise<Map<string, string>> {
   }
   return map;
 }
+
+/**
+ * Object prefix of a book. Books are grouped by the first two digits of their
+ * number (book 1402 lives in "p1/14/1402/"), which avoids a full re-scan; the
+ * cached scan list is preferred when available.
+ */
+async function resolveBookRef(book: string): Promise<KomatsuBookRef | null> {
+  const cached = await loadCachedBookList().catch(() => null);
+  const hit = cached?.find((ref) => ref.book === book);
+  if (hit) return hit;
+  if (book.length >= 3) return { book, dir: `p1/${book.slice(0, 2)}/${book}/` };
+  return null;
+}
+
+/** Book references for every catalog already imported from the parts store. */
+export async function listImportedBookRefs(): Promise<KomatsuBookRef[]> {
+  const imported = await loadImportedBooks();
+  const books = Array.from(imported.keys())
+    .map((ref) => ref.replace(/^kbp_json:/, ""))
+    .filter((book) => book.length > 0)
+    .sort(numericCompare);
+  const refs: KomatsuBookRef[] = [];
+  for (const book of books) {
+    const ref = await resolveBookRef(book);
+    if (ref) refs.push(ref);
+  }
+  return refs;
+}
+
+export type UnlinkedCatalog = { id: string; title: string; catalogNumber: string | null };
+
+/** Imported catalogs that still have no machine model attached. */
+export async function listUnlinkedCatalogs(): Promise<UnlinkedCatalog[]> {
+  const { data, error } = await supabase
+    .from("catalogs")
+    .select("id, title, catalog_number")
+    .eq("external_source_label", "kbp_json")
+    .is("machine_model_id", null)
+    .order("title");
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    title: row.title,
+    catalogNumber: row.catalog_number,
+  }));
+}
+
+/**
+ * Re-run model linking for every imported catalog using its stored title,
+ * without touching the pages. Returns how many are now linked.
+ */
+export async function relinkImportedCatalogs(): Promise<{ linked: number; pending: number }> {
+  const pending = await listUnlinkedCatalogs();
+  let linked = 0;
+  for (const catalog of pending) {
+    const hint = modelHintFromTitle(catalog.title);
+    const { data } = await supabase.rpc("link_catalog_to_model", {
+      p_catalog_id: catalog.id,
+      p_model_hint: hint,
+    });
+    if (((data as { ok?: boolean }) ?? {}).ok === true) linked += 1;
+  }
+  return { linked, pending: pending.length - linked };
+}
