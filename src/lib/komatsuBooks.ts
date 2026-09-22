@@ -287,31 +287,64 @@ function buildPageContent(page: GcsPageJson): string {
   return lines.join("\n").trim();
 }
 
-function buildPagePayload(page: GcsPageJson): {
+/** One scheme part in the shape `set_catalog_schemes` expects (camelCase). */
+export type SchemePartPayload = {
+  itemRef: string | null;
+  ref0: string | null;
+  ref1: string | null;
+  alt: string | null;
+  quantity: string | null;
+  number: string | null;
+  shortNumber: string | null;
+  name: string | null;
+  options: Json;
+  bookId: string | null;
+  pageId: string | null;
+};
+
+export type SchemePagePayload = {
   title: string | null;
   imageUrl: string | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
   storagePath: string | null;
   mirrored: boolean;
-  parts: Partial<CatalogSchemePart>[];
-} {
-  const images = normalizeImages(page.image);
+  labels: SchemeLabelPayload[];
+  parts: SchemePartPayload[];
+};
+
+function buildPagePayload(page: GcsPageJson): SchemePagePayload {
+  const image = page.image?.[0];
+  const bookDir = page.book?.BookDir ? String(page.book.BookDir) : null;
+  const labels: SchemeLabelPayload[] = [];
+  for (const label of image?.labels ?? []) {
+    const x1 = toInt(label.LabelX1);
+    const y1 = toInt(label.LabelY1);
+    const x2 = toInt(label.LabelX2);
+    const y2 = toInt(label.LabelY2);
+    if (x1 == null || y1 == null || x2 == null || y2 == null) continue;
+    labels.push({ itemRef: stripMarkup(label.sLabel), x1, y1, x2, y2 });
+  }
   return {
     title: page.data?.PageTitle ?? null,
-    imageUrl: images[0] ?? null,
+    imageUrl: diagramUrlFrom(image, bookDir),
+    imageWidth: toInt(image?.SrcPicWidth),
+    imageHeight: toInt(image?.SrcPicHeight),
     storagePath: null,
     mirrored: false,
+    labels,
     parts: (page.part ?? []).map((p, index) => ({
-      item_ref: p.item != null ? String(p.item) : String(index),
+      itemRef: p.item != null ? String(p.item) : String(index),
       ref0: p.ref0 ?? null,
       ref1: p.ref1 ?? null,
       alt: p.alt ?? null,
       quantity: p.quantity != null ? String(p.quantity) : null,
-      number: p.number ?? null,
-      short_number: p.short_number ?? null,
-      name: p.name ?? null,
+      number: stripMarkup(p.number),
+      shortNumber: stripMarkup(p.short_number),
+      name: stripMarkup(p.name),
       options: (Array.isArray(p.options) && p.options.length > 0 ? p.options : []) as Json,
-      book_id: p.book_id != null ? String(p.book_id) : null,
-      page_id: p.page_id != null ? String(p.page_id) : null,
+      bookId: p.book_id != null ? String(p.book_id) : null,
+      pageId: p.page_id != null ? String(p.page_id) : null,
     })),
   };
 }
