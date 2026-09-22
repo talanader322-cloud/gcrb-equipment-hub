@@ -22,10 +22,13 @@ import {
 import { useAccess, useSession } from "@/hooks/useSession";
 import { useI18n } from "@/lib/i18n";
 import {
+  listImportedBookRefs,
+  listUnlinkedCatalogs,
   loadCachedBookList,
   loadCachedBookMeta,
   loadImportedBooks,
   normalizeKeys,
+  relinkImportedCatalogs,
   resolveBookTitles,
   runKomatsuImport,
   scanKomatsuBooks,

@@ -9,7 +9,6 @@ import {
   type CachedBookMeta,
 } from "@/lib/komatsuBookCache";
 import { fetchKomatsuBookPage, fetchKomatsuDiagram } from "@/lib/komatsuProxy.functions";
-import type { CatalogSchemePart } from "@/lib/types";
 
 /**
  * Komatsu parts-books importer.
@@ -224,24 +223,34 @@ async function fetchPageJson(
   return JSON.parse(text) as GcsPageJson;
 }
 
-function normalizeImages(list: unknown[] | null | undefined): string[] {
-  const out: string[] = [];
-  for (const entry of list ?? []) {
-    if (typeof entry === "string") {
-      if (entry.trim()) out.push(entry);
-    } else if (entry && typeof entry === "object") {
-      const record = entry as Record<string, unknown>;
-      for (const key of ["url", "src", "file", "a"]) {
-        const value = record[key];
-        if (typeof value === "string" && value.trim()) {
-          out.push(value);
-          break;
-        }
-      }
-    }
-  }
-  return out;
+/**
+ * The source JSON stores the diagram as a file name plus the book directory,
+ * not as a URL, so the CDN address has to be assembled here.
+ */
+function diagramUrlFrom(image: GcsPageImage | undefined, fallbackDir: string | null): string | null {
+  const file = image?.PicName ? String(image.PicName).trim() : "";
+  if (!file) return null;
+  const dir = (image?.BookDir ? String(image.BookDir) : (fallbackDir ?? "")).trim();
+  if (!dir) return null;
+  return `${DIAGRAM_BASE}${dir}/${file}`;
 }
+
+function toInt(value: string | number | null | undefined): number | null {
+  if (value == null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.trunc(n) : null;
+}
+
+/** Item numbers in the source can carry inline markup (alternate-part icons). */
+function stripMarkup(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const clean = String(value)
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return clean.length > 0 ? clean : null;
+}
+
 
 function bookTitleFrom(page: GcsPageJson): string {
   const b = page.book;
@@ -277,65 +286,138 @@ function buildPageContent(page: GcsPageJson): string {
   return lines.join("\n").trim();
 }
 
-function buildPagePayload(page: GcsPageJson): {
+/** One scheme part in the shape `set_catalog_schemes` expects (camelCase). */
+export type SchemePartPayload = {
+  itemRef: string | null;
+  ref0: string | null;
+  ref1: string | null;
+  alt: string | null;
+  quantity: string | null;
+  number: string | null;
+  shortNumber: string | null;
+  name: string | null;
+  options: Json;
+  bookId: string | null;
+  pageId: string | null;
+};
+
+export type SchemePagePayload = {
   title: string | null;
   imageUrl: string | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
   storagePath: string | null;
   mirrored: boolean;
-  parts: Partial<CatalogSchemePart>[];
-} {
-  const images = normalizeImages(page.image);
+  labels: SchemeLabelPayload[];
+  parts: SchemePartPayload[];
+};
+
+function buildPagePayload(page: GcsPageJson): SchemePagePayload {
+  const image = page.image?.[0];
+  const bookDir = page.book?.BookDir ? String(page.book.BookDir) : null;
+  const labels: SchemeLabelPayload[] = [];
+  for (const label of image?.labels ?? []) {
+    const x1 = toInt(label.LabelX1);
+    const y1 = toInt(label.LabelY1);
+    const x2 = toInt(label.LabelX2);
+    const y2 = toInt(label.LabelY2);
+    if (x1 == null || y1 == null || x2 == null || y2 == null) continue;
+    labels.push({ itemRef: stripMarkup(label.sLabel), x1, y1, x2, y2 });
+  }
   return {
     title: page.data?.PageTitle ?? null,
-    imageUrl: images[0] ?? null,
+    imageUrl: diagramUrlFrom(image, bookDir),
+    imageWidth: toInt(image?.SrcPicWidth),
+    imageHeight: toInt(image?.SrcPicHeight),
     storagePath: null,
     mirrored: false,
+    labels,
     parts: (page.part ?? []).map((p, index) => ({
-      item_ref: p.item != null ? String(p.item) : String(index),
+      itemRef: p.item != null ? String(p.item) : String(index),
       ref0: p.ref0 ?? null,
       ref1: p.ref1 ?? null,
       alt: p.alt ?? null,
       quantity: p.quantity != null ? String(p.quantity) : null,
-      number: p.number ?? null,
-      short_number: p.short_number ?? null,
-      name: p.name ?? null,
+      number: stripMarkup(p.number),
+      shortNumber: stripMarkup(p.short_number),
+      name: stripMarkup(p.name),
       options: (Array.isArray(p.options) && p.options.length > 0 ? p.options : []) as Json,
-      book_id: p.book_id != null ? String(p.book_id) : null,
-      page_id: p.page_id != null ? String(p.page_id) : null,
+      bookId: p.book_id != null ? String(p.book_id) : null,
+      pageId: p.page_id != null ? String(p.page_id) : null,
     })),
   };
 }
 
+async function uploadImageOnce(
+  catalogId: string,
+  book: string,
+  page: number,
+  imageUrl: string,
+): Promise<string> {
+  // Diagram CDN sends no CORS headers either — fetch via the server proxy.
+  const { base64, contentType } = await fetchKomatsuDiagram({ data: { url: imageUrl } });
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  const blob = new Blob([bytes], { type: contentType });
+  const ext = (imageUrl.split(".").pop() ?? "png").split(/[/?#]/)[0] || "png";
+  const path = `schemes/${catalogId}/${book}/${page}.${ext}`;
+  const { error } = await supabase.storage
+    .from("catalogs")
+    .upload(path, blob, { upsert: true, contentType: blob.type || "image/png" });
+  if (error) throw new Error(error.message);
+  return path;
+}
+
+/** Copy one diagram into the private catalogs bucket, retrying twice. */
 async function uploadImage(
   catalogId: string,
   book: string,
   page: number,
   imageUrl: string,
-): Promise<string | null> {
-  try {
-    // Diagram CDN sends no CORS headers either — fetch via the server proxy.
-    const { base64, contentType } = await fetchKomatsuDiagram({ data: { url: imageUrl } });
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-    const blob = new Blob([bytes], { type: contentType });
-    const ext = (imageUrl.split(".").pop() ?? "png").split(/[/?#]/)[0] || "png";
-    const path = `schemes/${catalogId}/${book}/${page}.${ext}`;
-    const { error } = await supabase.storage
-      .from("catalogs")
-      .upload(path, blob, { upsert: true, contentType: blob.type || "image/png" });
-    if (error) return null;
-    return path;
-  } catch {
-    return null;
+): Promise<{ path: string } | { error: string }> {
+  let last = "unknown error";
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const path = await uploadImageOnce(catalogId, book, page, imageUrl);
+      return { path };
+    } catch (err) {
+      last = errMsg(err);
+      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+    }
   }
+  return { error: last };
 }
+
+/**
+ * Model hint from a book title such as "D155A-3 S/N 60001-UP" → "D155A-3".
+ */
+export function modelHintFromTitle(title: string): string {
+  const head = title.split(/\bS\/N\b/i)[0] ?? title;
+  const token = head.trim().split(/[\s,(]+/)[0] ?? "";
+  return token.trim();
+}
+
 
 export type ImportBookOptions = {
   manufacturerId: string;
   mirrorImages: boolean;
   signal?: AbortSignal;
 };
+
+/** Diagrams already copied into storage for this catalog, page → object path. */
+async function loadMirroredPages(catalogId: string): Promise<Map<number, string>> {
+  const map = new Map<number, string>();
+  const { data } = await supabase
+    .from("catalog_schemes")
+    .select("page_number, image_storage_path")
+    .eq("catalog_id", catalogId)
+    .not("image_storage_path", "is", null);
+  for (const row of data ?? []) {
+    if (row.image_storage_path) map.set(row.page_number, row.image_storage_path);
+  }
+  return map;
+}
 
 /** Import a single book: create/update its catalogs row, index text + schemes. */
 export async function importKomatsuBook(
@@ -349,7 +431,10 @@ export async function importKomatsuBook(
   const pages = await listKomatsuPages(ref, signal);
 
   const cover = await fetchPageJson(ref, pages[0] ?? 1, signal);
-  const title = bookTitleFrom(cover) || `Komatsu parts book ${ref.book}`;
+  const bookName = bookTitleFrom(cover) || `Komatsu parts book ${ref.book}`;
+  // Several books cover the same model, so the book number stays in the title
+  // to keep them apart in every list.
+  const title = `${bookName} (#${ref.book})`;
   const reference = `kbp_json:${ref.book}`;
 
   onEvent({ type: "log", message: `book ${ref.book}: “${title}” (${pages.length} pages)` });
@@ -369,14 +454,9 @@ export async function importKomatsuBook(
   const catalogId = ((created as { catalogId?: string }) ?? {}).catalogId;
   if (!catalogId) throw new Error("Catalog creation returned no id.");
 
-  const schemePages: {
-    pageNumber: number;
-    title: string | null;
-    imageUrl: string | null;
-    storagePath: string | null;
-    mirrored: boolean;
-    parts: Partial<CatalogSchemePart>[];
-  }[] = [];
+  const alreadyMirrored = mirrorImages ? await loadMirroredPages(catalogId) : new Map<number, string>();
+
+  const schemePages: (SchemePagePayload & { pageNumber: number })[] = [];
 
   const textPages: {
     pageNumber: number;
@@ -386,6 +466,8 @@ export async function importKomatsuBook(
 
   let done = 0;
   let index = 0;
+  let mirrorFailures = 0;
+  let firstMirrorError: string | null = null;
   const runner = async () => {
     while (index < pages.length) {
       if (signal?.aborted) throw new DOMException("Import aborted", "AbortError");
@@ -395,11 +477,17 @@ export async function importKomatsuBook(
       try {
         const json = await fetchPageJson(ref, page, signal);
         const payload = buildPagePayload(json);
-        let storagePath: string | null = null;
-        let mirrored = false;
-        if (mirrorImages && payload.imageUrl) {
-          storagePath = await uploadImage(catalogId, ref.book, page, payload.imageUrl);
-          mirrored = storagePath !== null;
+        let storagePath: string | null = alreadyMirrored.get(page) ?? null;
+        let mirrored = storagePath !== null;
+        if (mirrorImages && !mirrored && payload.imageUrl) {
+          const result = await uploadImage(catalogId, ref.book, page, payload.imageUrl);
+          if ("path" in result) {
+            storagePath = result.path;
+            mirrored = true;
+          } else {
+            mirrorFailures += 1;
+            firstMirrorError ??= result.error;
+          }
         }
         schemePages.push({ ...payload, pageNumber: page, storagePath, mirrored });
         textPages.push({
@@ -422,11 +510,36 @@ export async function importKomatsuBook(
   await Promise.all(Array.from({ length: Math.min(4, pages.length) }, () => runner()));
 
   if (schemePages.length > 0) {
-    await supabase.rpc("set_catalog_schemes", { p_catalog_id: catalogId, p_pages: schemePages });
+    const { error } = await supabase.rpc("set_catalog_schemes", {
+      p_catalog_id: catalogId,
+      p_pages: schemePages,
+    });
+    if (error) throw new Error(error.message);
   }
   if (textPages.length > 0) {
     await supabase.rpc("upsert_catalog_pages", { p_catalog_id: catalogId, p_pages: textPages });
   }
+
+  if (mirrorFailures > 0) {
+    onEvent({
+      type: "log",
+      message: `book ${ref.book}: ${mirrorFailures} diagram(s) not copied (${firstMirrorError ?? "unknown"}) — the source link is still saved.`,
+    });
+  }
+
+  // Link the catalog to its machine model so it shows on the model page.
+  const hint = modelHintFromTitle(bookName);
+  const { data: linked } = await supabase.rpc("link_catalog_to_model", {
+    p_catalog_id: catalogId,
+    p_model_hint: hint,
+  });
+  const linkOk = ((linked as { ok?: boolean }) ?? {}).ok === true;
+  onEvent({
+    type: "log",
+    message: linkOk
+      ? `book ${ref.book}: linked to model “${hint}”.`
+      : `book ${ref.book}: no model matched “${hint}” — needs manual linking.`,
+  });
 
   return { catalogId, pages: textPages.length };
 }
@@ -643,4 +756,68 @@ export async function loadImportedBooks(): Promise<Map<string, string>> {
     if (row.external_document_ref) map.set(row.external_document_ref, row.id);
   }
   return map;
+}
+
+/**
+ * Object prefix of a book. Books are grouped by the first two digits of their
+ * number (book 1402 lives in "p1/14/1402/"), which avoids a full re-scan; the
+ * cached scan list is preferred when available.
+ */
+async function resolveBookRef(book: string): Promise<KomatsuBookRef | null> {
+  const cached = await loadCachedBookList().catch(() => null);
+  const hit = cached?.find((ref) => ref.book === book);
+  if (hit) return hit;
+  if (book.length >= 3) return { book, dir: `p1/${book.slice(0, 2)}/${book}/` };
+  return null;
+}
+
+/** Book references for every catalog already imported from the parts store. */
+export async function listImportedBookRefs(): Promise<KomatsuBookRef[]> {
+  const imported = await loadImportedBooks();
+  const books = Array.from(imported.keys())
+    .map((ref) => ref.replace(/^kbp_json:/, ""))
+    .filter((book) => book.length > 0)
+    .sort(numericCompare);
+  const refs: KomatsuBookRef[] = [];
+  for (const book of books) {
+    const ref = await resolveBookRef(book);
+    if (ref) refs.push(ref);
+  }
+  return refs;
+}
+
+export type UnlinkedCatalog = { id: string; title: string; catalogNumber: string | null };
+
+/** Imported catalogs that still have no machine model attached. */
+export async function listUnlinkedCatalogs(): Promise<UnlinkedCatalog[]> {
+  const { data, error } = await supabase
+    .from("catalogs")
+    .select("id, title, catalog_number")
+    .eq("external_source_label", "kbp_json")
+    .is("machine_model_id", null)
+    .order("title");
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    title: row.title,
+    catalogNumber: row.catalog_number,
+  }));
+}
+
+/**
+ * Re-run model linking for every imported catalog using its stored title,
+ * without touching the pages. Returns how many are now linked.
+ */
+export async function relinkImportedCatalogs(): Promise<{ linked: number; pending: number }> {
+  const pending = await listUnlinkedCatalogs();
+  let linked = 0;
+  for (const catalog of pending) {
+    const hint = modelHintFromTitle(catalog.title);
+    const { data } = await supabase.rpc("link_catalog_to_model", {
+      p_catalog_id: catalog.id,
+      p_model_hint: hint,
+    });
+    if (((data as { ok?: boolean }) ?? {}).ok === true) linked += 1;
+  }
+  return { linked, pending: pending.length - linked };
 }
